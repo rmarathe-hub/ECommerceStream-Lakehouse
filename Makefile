@@ -1,4 +1,4 @@
-.PHONY: help up down logs ps sample-1m sample-5m produce-100k produce-1m produce-5m stream-bronze venv
+.PHONY: help up down logs ps sample-1m sample-5m produce-100k produce-1m produce-5m stream-bronze stream-bronze-reset validate-bronze smoke-test-100k venv
 
 PYTHON ?= .venv/bin/python3
 SPARK_MASTER_DOCKER ?= spark://spark-master:7077
@@ -22,6 +22,8 @@ help:
 	@echo "  make produce-1m    Replay 1M events to Kafka (local demo)"
 	@echo "  make produce-5m    Replay 5M events to Kafka (local stress test)"
 	@echo "  make stream-bronze Stream Kafka events to bronze Parquet (requires: make up)"
+	@echo "  make validate-bronze Validate bronze Parquet output"
+	@echo "  make smoke-test-100k Produce 100k, stream bronze, validate"
 	@echo ""
 	@echo "Optional Postgres (Airflow): docker compose --profile airflow up -d"
 
@@ -94,3 +96,11 @@ stream-bronze-reset:
 		--quarantine-path $(QUARANTINE_PATH_DOCKER) \
 		--checkpoint-path $(CHECKPOINT_PATH_DOCKER) \
 		--reset-checkpoint
+
+validate-bronze:
+	$(PYTHON) src/validation/validate_bronze.py --bronze-path data/bronze/events
+
+smoke-test-100k:
+	$(MAKE) produce-100k
+	$(MAKE) stream-bronze
+	$(MAKE) validate-bronze

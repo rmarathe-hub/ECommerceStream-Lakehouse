@@ -131,6 +131,18 @@ Output:
 - `data/bronze/events/` — partitioned by `event_date`, `event_type`
 - `data/bronze/quarantine/` — invalid records with `invalid_reason`
 
+Validate bronze output:
+
+```bash
+make validate-bronze
+```
+
+Full 100k smoke test (produce → stream → validate):
+
+```bash
+make smoke-test-100k
+```
+
 ## Build plan
 
 Full day-by-day plan: [docs/build_plan.md](docs/build_plan.md)
