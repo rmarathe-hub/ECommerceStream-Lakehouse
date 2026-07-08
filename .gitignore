@@ -1,0 +1,33 @@
+# Environment
+.env
+
+# Python
+__pycache__/
+.venv/
+venv/
+
+# macOS
+.DS_Store
+
+# Data lake layers (keep directory structure via .gitkeep)
+data/raw/*
+!data/raw/.gitkeep
+data/bronze/*
+!data/bronze/.gitkeep
+data/silver/*
+!data/silver/.gitkeep
+data/gold/*
+!data/gold/.gitkeep
+
+# Data files
+*.parquet
+*.csv
+*.log
+
+# Terraform
+.terraform/
+terraform.tfstate
+terraform.tfstate.backup
+
+# dbt
+.dbt/

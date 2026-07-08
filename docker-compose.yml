@@ -1,0 +1,4 @@
+# Local streaming stack — services wired up in Week 1 Day 1
+# Planned: Redpanda/Kafka, Spark, MinIO, optional Postgres for Airflow
+
+services: {}
