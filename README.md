@@ -51,7 +51,26 @@ ECommerceStream-Lakehouse/
 ```bash
 cp .env.example .env   # fill in values as needed
 make help
+make up              # start Redpanda, Spark, MinIO
+make ps              # verify containers are healthy
+make logs            # tail logs (Ctrl+C to exit)
+make down            # stop stack
 ```
+
+### Local stack (Week 1)
+
+| Service       | URL / Port                         | Notes                              |
+|---------------|------------------------------------|------------------------------------|
+| Redpanda Kafka| `localhost:19092`                  | Host producer connects here        |
+| Redpanda (Docker) | `redpanda:9092`                | Spark jobs inside Docker use this  |
+| Schema Registry | `localhost:18081`                | Optional                           |
+| Spark Master UI | http://localhost:8080            | Cluster dashboard                  |
+| Spark Master  | `spark://localhost:7077`           | `spark-submit` from host           |
+| MinIO S3 API  | http://localhost:9000              | S3-compatible local object store   |
+| MinIO Console | http://localhost:9001              | Login: `minioadmin` / `minioadmin` |
+| Postgres      | `localhost:5432`                   | Optional — `docker compose --profile airflow up -d` |
+
+`./data` and `./src` are mounted into Spark containers at `/opt/data` and `/opt/src` for streaming jobs.
 
 ## Build plan
 
