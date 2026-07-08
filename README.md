@@ -4,6 +4,8 @@ A cost-controlled real-time e-commerce lakehouse pipeline. Replays 1M–5M event
 
 **Snowflake budget:** $2–6/month, hard cap at $6.
 
+> **Cost controls are mandatory.** Read [docs/cost_controls.md](docs/cost_controls.md) before writing code or using Snowflake.
+
 ## Project structure
 
 ```

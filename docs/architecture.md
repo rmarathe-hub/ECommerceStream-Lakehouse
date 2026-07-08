@@ -29,3 +29,5 @@ Streamlit / Grafana dashboard
 - Heavy processing runs locally (Spark).
 - Only curated gold tables go to S3 and Snowflake.
 - Full 285M-event replay is documented but not run by default.
+
+Full guardrails: [cost_controls.md](cost_controls.md)
