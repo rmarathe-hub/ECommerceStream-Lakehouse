@@ -10,8 +10,11 @@ venv/
 .DS_Store
 
 # Data lake layers (keep directory structure via .gitkeep)
-data/raw/*
+data/raw/**
 !data/raw/.gitkeep
+!data/raw/source/
+!data/raw/source/README.md
+!data/raw/source/.gitkeep
 data/bronze/*
 !data/bronze/.gitkeep
 data/silver/*

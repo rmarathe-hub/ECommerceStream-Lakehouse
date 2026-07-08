@@ -143,6 +143,38 @@ Full 100k smoke test (produce → stream → validate; stack must already be run
 make smoke-test-100k
 ```
 
+Fast dev loop (~30–60 sec; stack must already be running):
+
+```bash
+make quick-test    # produce-10k + stream-bronze + validate-bronze
+```
+
+See [docs/troubleshooting.md](docs/troubleshooting.md) for common issues (checkpoint reuse, cumulative bronze rows, Ivy cache).
+
+### Silver transform (Week 2)
+
+Clean and deduplicate bronze into silver:
+
+```bash
+make transform-silver   # Spark batch: bronze -> silver
+make validate-silver    # silver DQ checks (must print PASSED)
+make smoke-test-silver  # transform + validate
+```
+
+Output: `data/silver/events/` partitioned by `event_date`.
+
+### Sessionization (Week 2 Day 9)
+
+Build session-enriched events and the session fact table:
+
+```bash
+make transform-sessions   # silver -> session_events + fct_sessions
+make validate-sessions    # must print PASSED
+make smoke-test-sessions  # transform + validate
+```
+
+Outputs: `data/silver/session_events/`, `data/gold/fct_sessions/`.
+
 ### Local 100k demo (Week 1)
 
 One command to run the full local streaming path:
@@ -153,7 +185,7 @@ make local-demo-100k
 
 This runs:
 
-1. `make up` — start Redpanda, Spark, MinIO
+1. `make up` — start Redpanda, Spark, MinIO (waits for health checks)
 2. `make produce-100k` — replay 100k events to Kafka (~2–3 min)
 3. `make stream-bronze` — write bronze Parquet from Kafka
 4. `make validate-bronze` — data quality checks (must print `PASSED`)

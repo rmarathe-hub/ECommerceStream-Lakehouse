@@ -51,6 +51,76 @@ Written by `src/streaming/kafka_to_bronze.py` from the `ecommerce_events` Kafka 
 
 Invalid records are written to `data/bronze/quarantine/` with an `invalid_reason` column.
 
+## Silver events (`data/silver/events/`)
+
+Written by `src/transforms/bronze_to_silver.py` from bronze Parquet. Partitioned by `event_date`.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `event_id` | string | Unique event identifier (deduplicated) |
+| `event_ts` | timestamp | Parsed event timestamp |
+| `event_date` | date | Event date |
+| `event_type` | string | `view`, `cart`, `remove_from_cart`, `purchase` |
+| `product_id` | long | Product identifier |
+| `category_id` | long | Category identifier (nullable) |
+| `category_code` | string | Category taxonomy (nullable, trimmed) |
+| `brand` | string | Brand name (nullable, trimmed, lowercased) |
+| `price` | double | Product price (nullable, must be >= 0 when present) |
+| `user_id` | long | User identifier |
+| `user_session` | string | Session identifier |
+| `bronze_ingested_at` | timestamp | Original bronze ingestion time |
+| `silver_processed_at` | timestamp | Silver transform run timestamp |
+
+Cleaning rules: dedupe by `event_id` (latest Kafka offset wins), drop invalid rows, normalize `brand`/`category_code`, cast `category_id` to long.
+
+## Silver session events (`data/silver/session_events/`)
+
+Written by `src/transforms/silver_sessionize.py` from silver events. Partitioned by `event_date`.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `event_id` | string | Unique event identifier |
+| `event_ts` | timestamp | Parsed event timestamp |
+| `event_date` | date | Event date |
+| `event_type` | string | Event type |
+| `product_id` | long | Product identifier |
+| `category_id` | long | Category identifier (nullable) |
+| `category_code` | string | Category taxonomy (nullable) |
+| `brand` | string | Brand name (nullable) |
+| `price` | double | Product price (nullable) |
+| `user_id` | long | User identifier |
+| `session_id` | string | Session identifier (`user_session`) |
+| `event_seq_in_session` | int | 1-based event order within session |
+| `session_start_ts` | timestamp | First event timestamp in session |
+| `session_end_ts` | timestamp | Last event timestamp in session |
+| `seconds_from_session_start` | long | Seconds after session start |
+| `bronze_ingested_at` | timestamp | Bronze ingestion time |
+| `silver_processed_at` | timestamp | Silver transform time |
+| `sessionized_at` | timestamp | Sessionization run timestamp |
+
+## Gold sessions (`data/gold/fct_sessions/`)
+
+Written by `src/transforms/silver_sessionize.py`. Partitioned by `session_date`.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `session_id` | string | Session identifier |
+| `user_id` | long | User identifier |
+| `session_date` | date | Date of session start |
+| `session_start_ts` | timestamp | First event in session |
+| `session_end_ts` | timestamp | Last event in session |
+| `session_duration_seconds` | long | Session length in seconds |
+| `event_count` | long | Total events in session |
+| `view_count` | long | View events |
+| `cart_count` | long | Add-to-cart events |
+| `remove_from_cart_count` | long | Remove-from-cart events |
+| `purchase_count` | long | Purchase events |
+| `distinct_products_viewed` | long | Unique products viewed |
+| `distinct_products_purchased` | long | Unique products purchased |
+| `session_revenue` | double | Sum of purchase prices |
+| `converted` | boolean | True if session has a purchase |
+| `gold_processed_at` | timestamp | Gold transform run timestamp |
+
 ## Planned layers
 
 | Layer  | Location              | Description                          |

@@ -20,7 +20,7 @@ Week-by-week plan for ECommerceStream-Lakehouse. See [cost_controls.md](cost_con
 | 4 | Spark Structured Streaming bronze writer (`kafka_to_bronze.py`) | Done |
 | 5 | 100k smoke test + bronze validation (verify fast replay ~2.5 min) | Done |
 | 6 | `local-demo-100k` Makefile target + README docs | Done |
-| 7 | Buffer/fix day (Docker, Spark, bronze bugs) | Planned |
+| 7 | Buffer/fix day (Docker, Spark, bronze bugs) | Done |
 
 ### Day 3.5 — Producer throughput optimization (before Day 4)
 
@@ -67,21 +67,53 @@ When running the full smoke test, confirm:
 
 Use for Docker, Spark, bronze, and producer **bug fixes** found during Days 4–6. Producer optimization should already be done on Day 3.5.
 
+**Deliverables (Day 7):**
+
+- `make up` uses `docker compose up -d --wait` (replaces fixed `sleep` in demo)
+- Persistent `spark_ivy` Docker volume — Kafka connector JARs cached across restarts
+- Fast dev targets: `produce-10k`, `smoke-test-10k`, `quick-test`
+- `make status` alias for `make ps`
+- [docs/troubleshooting.md](troubleshooting.md) — Week 1 runbook
+
 ### Day 6 — Local 100k demo command
 
 `make local-demo-100k` chains `up` → `produce-100k` → `stream-bronze` → `validate-bronze` for a single-command Week 1 demo.
 
 ## Week 2: Silver/gold Spark transformations
 
-| Day | Task |
-|-----|------|
-| 8 | Bronze → silver cleaning |
-| 9 | Sessionization |
+| Day | Task | Status |
+|-----|------|--------|
+| 8 | Bronze → silver cleaning | Done |
+| 9 | Sessionization | Done |
 | 10 | Purchase and product marts |
 | 11 | Funnel and cart abandonment marts |
 | 12 | Data quality checks |
 | 13 | Full local **1M** demo (uses optimized producer from Day 3.5) |
 | 14 | Buffer/fix day |
+
+### Day 8 — Bronze → silver cleaning
+
+**Goal:** Batch Spark job that normalizes bronze events into a deduplicated silver table.
+
+**Deliverables:**
+
+- `src/transforms/bronze_to_silver.py` — parse timestamps, normalize strings, filter invalid rows, dedupe by `event_id`
+- `src/validation/validate_silver.py` — silver DQ checks (unique `event_id`, required fields, non-negative price)
+- `make transform-silver`, `make validate-silver`, `make smoke-test-silver`
+- Output: `data/silver/events/` partitioned by `event_date`
+
+### Day 9 — Sessionization
+
+**Goal:** Enrich silver events with per-session ordering and build the `fct_sessions` gold mart.
+
+**Deliverables:**
+
+- `src/transforms/silver_sessionize.py` — event sequence in session, session timing metrics, session aggregates
+- `src/validation/validate_sessions.py` — reconcile row counts and session-level DQ checks
+- `make transform-sessions`, `make validate-sessions`, `make smoke-test-sessions`
+- Outputs:
+  - `data/silver/session_events/` — events with `event_seq_in_session`, `seconds_from_session_start`
+  - `data/gold/fct_sessions/` — one row per session with counts, revenue, conversion flag
 
 ## Week 3: Terraform + S3 cloud-lite
 
