@@ -43,7 +43,8 @@ ECommerceStream-Lakehouse/
 └── docs/
     ├── architecture.md
     ├── cost_controls.md
-    └── data_dictionary.md
+    ├── data_dictionary.md
+    └── demo_strategy.md
 ```
 
 ## Quick start
@@ -71,6 +72,28 @@ make down            # stop stack
 | Postgres      | `localhost:5432`                   | Optional — `docker compose --profile airflow up -d` |
 
 `./data` and `./src` are mounted into Spark containers at `/opt/data` and `/opt/src` for streaming jobs.
+
+### Dataset setup (Week 1)
+
+1. Download a monthly file from [Kaggle e-commerce behavior data](https://www.kaggle.com/datasets/mkechinov/ecommerce-behavior-data-from-multi-category-store) into `data/raw/source/` (start with `2019-Oct.csv` or `2019-Oct.csv.gz`).
+2. Create sampled files locally:
+
+```bash
+make sample-1m   # -> data/raw/events_1m.csv
+make sample-5m   # -> data/raw/events_5m.csv  (use multiple source months if needed)
+```
+
+Raw source files and samples stay on disk only — they are gitignored and never uploaded to S3 or Snowflake.
+
+### Demo strategy (1M cloud / 5M local)
+
+| Demo | File | Events | Cloud (S3 / Snowflake) |
+|------|------|--------|-------------------------|
+| **1M cloud-lite** | `data/raw/events_1m.csv` | 1M | Yes — curated gold only |
+| **5M local stress** | `data/raw/events_5m.csv` | 5M | **No** — local pipeline only |
+| **285M full replay** | — | 285M | **Never** — documented only |
+
+The 5M run proves scale locally without a second Snowflake reload. See [docs/demo_strategy.md](docs/demo_strategy.md).
 
 ## Build plan
 

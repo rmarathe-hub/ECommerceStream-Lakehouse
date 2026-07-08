@@ -98,10 +98,12 @@ All bronze, silver, and gold transformations run on the local Docker/Spark stack
 |----------------------|-------|-----------|-------------|
 | Raw / bronze / silver| Yes   | No        | No          |
 | Gold marts (1M demo) | Yes   | Yes       | Yes         |
-| Gold marts (5M demo) | Yes   | Optional  | **No**      |
+| Gold marts (5M demo) | Yes   | **No**    | **No**      |
 | Full 285M replay     | Doc only | No     | **Never**   |
 
 Load only small curated tables: sessions, purchases, funnel aggregates, revenue by category, DQ summaries — not raw event streams.
+
+See [demo_strategy.md](demo_strategy.md) for the 1M cloud-lite vs 5M local-only demo matrix.
 
 ### 8. GitHub Actions cloud workflow is manual by default
 
