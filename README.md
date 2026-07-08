@@ -137,10 +137,45 @@ Validate bronze output:
 make validate-bronze
 ```
 
-Full 100k smoke test (produce → stream → validate):
+Full 100k smoke test (produce → stream → validate; stack must already be running):
 
 ```bash
 make smoke-test-100k
+```
+
+### Local 100k demo (Week 1)
+
+One command to run the full local streaming path:
+
+```bash
+make local-demo-100k
+```
+
+This runs:
+
+1. `make up` — start Redpanda, Spark, MinIO
+2. `make produce-100k` — replay 100k events to Kafka (~2–3 min)
+3. `make stream-bronze` — write bronze Parquet from Kafka
+4. `make validate-bronze` — data quality checks (must print `PASSED`)
+
+**Prerequisites**
+
+- `make venv` and `pip install -r requirements.txt`
+- `data/raw/events_1m.csv` exists (`make sample-1m`)
+
+**Typical runtime:** ~3–5 minutes (mostly producer replay).
+
+**Success looks like**
+
+- Producer finishes with `Finished: sent 100,000 events`
+- Spark streaming job exits without error
+- Validator prints `PASSED`
+
+For a clean re-run from scratch (reprocess all Kafka messages into bronze):
+
+```bash
+make stream-bronze-reset
+make local-demo-100k
 ```
 
 ## Build plan

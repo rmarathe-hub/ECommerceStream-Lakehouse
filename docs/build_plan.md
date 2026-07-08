@@ -19,7 +19,7 @@ Week-by-week plan for ECommerceStream-Lakehouse. See [cost_controls.md](cost_con
 | **3.5** | **Producer throughput optimization** (before bronze work) | Done |
 | 4 | Spark Structured Streaming bronze writer (`kafka_to_bronze.py`) | Done |
 | 5 | 100k smoke test + bronze validation (verify fast replay ~2.5 min) | Done |
-| 6 | `local-demo-100k` Makefile target + README docs | Planned |
+| 6 | `local-demo-100k` Makefile target + README docs | Done |
 | 7 | Buffer/fix day (Docker, Spark, bronze bugs) | Planned |
 
 ### Day 3.5 — Producer throughput optimization (before Day 4)
@@ -66,6 +66,10 @@ When running the full smoke test, confirm:
 ### Day 7 — Buffer/fix only
 
 Use for Docker, Spark, bronze, and producer **bug fixes** found during Days 4–6. Producer optimization should already be done on Day 3.5.
+
+### Day 6 — Local 100k demo command
+
+`make local-demo-100k` chains `up` → `produce-100k` → `stream-bronze` → `validate-bronze` for a single-command Week 1 demo.
 
 ## Week 2: Silver/gold Spark transformations
 
