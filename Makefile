@@ -1,6 +1,12 @@
-.PHONY: help up down logs ps sample-1m sample-5m produce-100k produce-1m produce-5m venv
+.PHONY: help up down logs ps sample-1m sample-5m produce-100k produce-1m produce-5m stream-bronze venv
 
 PYTHON ?= .venv/bin/python3
+SPARK_MASTER_DOCKER ?= spark://spark-master:7077
+SPARK_PACKAGES ?= org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.3
+KAFKA_BOOTSTRAP_DOCKER ?= redpanda:9092
+BRONZE_PATH_DOCKER ?= /opt/data/bronze/events
+QUARANTINE_PATH_DOCKER ?= /opt/data/bronze/quarantine
+CHECKPOINT_PATH_DOCKER ?= /opt/data/bronze/checkpoints/kafka_to_bronze
 
 help:
 	@echo "ECommerceStream-Lakehouse — available commands"
@@ -15,6 +21,7 @@ help:
 	@echo "  make produce-100k  Replay 100k events to Kafka (requires: make up)"
 	@echo "  make produce-1m    Replay 1M events to Kafka (local demo)"
 	@echo "  make produce-5m    Replay 5M events to Kafka (local stress test)"
+	@echo "  make stream-bronze Stream Kafka events to bronze Parquet (requires: make up)"
 	@echo ""
 	@echo "Optional Postgres (Airflow): docker compose --profile airflow up -d"
 
@@ -60,3 +67,30 @@ produce-5m:
 		--topic ecommerce_events \
 		--limit 5000000 \
 		--rate-per-second 1000
+
+stream-bronze:
+	docker exec spark-master mkdir -p /tmp/spark-ivy
+	docker exec spark-master /opt/spark/bin/spark-submit \
+		--master $(SPARK_MASTER_DOCKER) \
+		--conf spark.jars.ivy=/tmp/spark-ivy \
+		--packages $(SPARK_PACKAGES) \
+		/opt/src/streaming/kafka_to_bronze.py \
+		--kafka-bootstrap $(KAFKA_BOOTSTRAP_DOCKER) \
+		--topic ecommerce_events \
+		--bronze-path $(BRONZE_PATH_DOCKER) \
+		--quarantine-path $(QUARANTINE_PATH_DOCKER) \
+		--checkpoint-path $(CHECKPOINT_PATH_DOCKER)
+
+stream-bronze-reset:
+	docker exec spark-master mkdir -p /tmp/spark-ivy
+	docker exec spark-master /opt/spark/bin/spark-submit \
+		--master $(SPARK_MASTER_DOCKER) \
+		--conf spark.jars.ivy=/tmp/spark-ivy \
+		--packages $(SPARK_PACKAGES) \
+		/opt/src/streaming/kafka_to_bronze.py \
+		--kafka-bootstrap $(KAFKA_BOOTSTRAP_DOCKER) \
+		--topic ecommerce_events \
+		--bronze-path $(BRONZE_PATH_DOCKER) \
+		--quarantine-path $(QUARANTINE_PATH_DOCKER) \
+		--checkpoint-path $(CHECKPOINT_PATH_DOCKER) \
+		--reset-checkpoint

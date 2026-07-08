@@ -17,7 +17,7 @@ Week-by-week plan for ECommerceStream-Lakehouse. See [cost_controls.md](cost_con
 | 2 | Event sampling (`sample_events.py`, `make sample-1m` / `sample-5m`) | Done |
 | 3 | Kafka replay producer (`replay_events.py`, `make produce-100k`) | Done |
 | **3.5** | **Producer throughput optimization** (before bronze work) | Done |
-| 4 | Spark Structured Streaming bronze writer (`kafka_to_bronze.py`) | Planned |
+| 4 | Spark Structured Streaming bronze writer (`kafka_to_bronze.py`) | Done |
 | 5 | 100k smoke test + bronze validation (verify fast replay ~1.7 min) | Planned |
 | 6 | `local-demo-100k` Makefile target + README docs | Planned |
 | 7 | Buffer/fix day (Docker, Spark, bronze bugs) | Planned |

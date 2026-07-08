@@ -44,13 +44,16 @@ ECommerceStream-Lakehouse/
     ├── architecture.md
     ├── cost_controls.md
     ├── data_dictionary.md
-    └── demo_strategy.md
+    ├── demo_strategy.md
+    └── build_plan.md
 ```
 
 ## Quick start
 
 ```bash
 cp .env.example .env   # fill in values as needed
+python3 -m venv .venv  # one-time setup
+.venv/bin/pip install -r requirements.txt
 make help
 make up              # start Redpanda, Spark, MinIO
 make ps              # verify containers are healthy
@@ -95,14 +98,51 @@ Raw source files and samples stay on disk only — they are gitignored and never
 
 The 5M run proves scale locally without a second Snowflake reload. See [docs/demo_strategy.md](docs/demo_strategy.md).
 
+### Event replay (Week 1)
+
+With the Docker stack running (`make up`), replay sampled events into Redpanda:
+
+```bash
+.venv/bin/pip install -r requirements.txt   # if not already installed
+make produce-100k
+```
+
+Or directly:
+
+```bash
+python3 src/producer/replay_events.py \
+  --input data/raw/events_1m.csv \
+  --topic ecommerce_events \
+  --limit 100000 \
+  --rate-per-second 1000
+```
+
+### Bronze ingestion (Week 1)
+
+Stream Kafka events into partitioned bronze Parquet:
+
+```bash
+make stream-bronze        # process new Kafka offsets
+make stream-bronze-reset  # wipe checkpoint and reprocess from earliest
+```
+
+Output:
+
+- `data/bronze/events/` — partitioned by `event_date`, `event_type`
+- `data/bronze/quarantine/` — invalid records with `invalid_reason`
+
 ## Build plan
+
+Full day-by-day plan: [docs/build_plan.md](docs/build_plan.md)
 
 | Week | Focus                                      |
 |------|--------------------------------------------|
 | 0    | Project setup and cost guardrails          |
-| 1    | Local streaming foundation                 |
+| 1    | Local streaming foundation (+ **Day 3.5 producer optimization** before bronze) |
 | 2    | Silver/gold Spark transformations          |
 | 3    | Terraform + S3 cloud-lite                  |
 | 4    | Snowflake cost guardrails                  |
 | 5    | Snowflake load + dbt                       |
 | 6    | Monitoring, dashboard, CI, polish            |
+
+**Week 1 Day 3.5:** Optimize `replay_events.py` (batch/async acks) **before Day 4** — cuts 100k replay to ~1.7 min and 5M from ~19 hours → ~1.4 hours. Day 5 smoke test verifies speed.
