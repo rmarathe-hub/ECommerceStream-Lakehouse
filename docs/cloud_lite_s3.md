@@ -85,8 +85,8 @@ aws s3 ls s3://commercestream-lake-rmarathe-us-east-1/gold/ --summarize --recurs
 
 ## Next steps
 
-1. **Week 4** — Snowflake X-Small warehouse, auto-suspend, resource monitor (no data load yet)
-2. **Week 5** — Load gold from S3, dbt marts, `suspend-snowflake` after every run
+1. **Week 4** — Snowflake guardrails (Days 22–25) — **done**; stage + dbt scaffold (Days 26–28) — **done**
+2. **Week 5** — Load gold from S3, dbt marts, `make snowflake-suspend` after every run — see [week5_load_plan.md](week5_load_plan.md)
 3. **Week 6** — Dashboard, manual CI, full cloud-lite demo with Snowflake
 
 See [cost_controls.md](cost_controls.md) and [build_plan.md](build_plan.md).

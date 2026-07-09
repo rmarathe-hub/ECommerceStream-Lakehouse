@@ -296,9 +296,71 @@ S3 bucket, IAM, lifecycle rules, budget alert, gold-only upload. No Snowflake ye
 
 X-Small warehouse, auto-suspend, resource monitor, database/schemas — **before any data load**.
 
+| Day | Task | Status |
+|-----|------|--------|
+| 22 | SQL scripts in `sql/admin/` (warehouse, monitor, DB/schemas) | Done |
+| 23 | Makefile targets: `snowflake-guardrails`, `snowflake-check-guardrails`, `snowflake-suspend` | Done |
+| 24 | Run bootstrap via SnowSQL; verify guardrails | Done |
+| 25 | Document guardrails in `cost_controls.md` / README | Done |
+| 26 | S3 storage integration + external stage (`sql/snowflake/`, no load) | Done |
+| 27 | dbt project scaffold (`dbt/commercestream/`, no `dbt build`) | Done |
+| 28 | Week 5 dry-run plan + `make week5-load-dry-run` + suspend habit | Done |
+
+**Rules:** One warehouse (`DE_PROJECT_WH`, XSMALL), monitor `DE_PROJECT_MONITOR` (3 credits/month, notify 50/80%, suspend 100/110%), `COMMERCESTREAM_DB` + schemas only — **no COPY INTO, no dbt run, no data until Week 5**. Every session ends with `make snowflake-suspend`.
+
+### Day 26 — S3 storage integration + external stage
+
+**Goal:** Wire Snowflake to S3 `gold/` for Week 5 load — metadata only, no `COPY INTO`.
+
+**Deliverables:**
+
+- `sql/snowflake/01_create_file_format.sql` — Parquet file format
+- `sql/snowflake/02_create_storage_integration.sql` — `COMMERCESTREAM_S3_INT` (`gold/` only)
+- `sql/snowflake/03_create_external_stage.sql` — `COMMERCESTREAM_GOLD_STAGE`
+- `sql/snowflake/04_verify_stage_setup.sql` — `SHOW` / `DESC` checks
+- `sql/snowflake/run_stage_setup.sql` — ordered runner
+- `infra/snowflake/README.md` — IAM role + trust policy for Snowflake
+- `make snowflake-stage-setup`, `make snowflake-check-stage`
+
+**Prerequisites:** AWS IAM role (`SNOWFLAKE_S3_STORAGE_AWS_ROLE_ARN` in `.env`), gold already on S3 from Week 3.
+
+**Not in scope:** `COPY INTO`, `LIST @stage` in automation, raw/bronze/silver paths.
+
+### Day 27 — dbt project scaffold
+
+**Goal:** Presentation-layer dbt project ready for Week 5 — **do not run `dbt build`**.
+
+**Deliverables:**
+
+- `dbt/commercestream/dbt_project.yml` — `threads: 1`, `DE_PROJECT_WH`, schemas `STAGING` / `MARTS`
+- `dbt/commercestream/profiles.yml.example` — env-var based Snowflake profile
+- `models/staging/stg_*.sql` — passthrough from gold staging sources
+- `models/marts/mart_*.sql` — dashboard-ready marts
+- `models/staging/_sources.yml` — `COMMERCESTREAM_DB.STAGING` gold tables
+
+### Day 28 — Buffer / Week 5 dry-run + suspend habit
+
+**Goal:** Validate prerequisites and document Week 5 load sequence without loading data.
+
+**Deliverables:**
+
+- `scripts/dry_run_week5_load.sh` + `make week5-load-dry-run`
+- [week5_load_plan.md](week5_load_plan.md) — session flow, credit budget, suspend checklist
+- Reinforce: every Snowflake session ends with `make snowflake-suspend`
+
 ## Week 5: Snowflake load + dbt
 
-Curated gold only. Explicit `suspend-snowflake` after every run.
+Curated gold only. Explicit `make snowflake-suspend` after every run.
+
+| Day | Task | Status |
+|-----|------|--------|
+| 29 | `COPY INTO` gold tables from `@COMMERCESTREAM_GOLD_STAGE` | Planned |
+| 30 | First `dbt build --select <subset>` | Planned |
+| 31 | Full `dbt build` milestone + mart verification | Planned |
+| 32 | `make cloud-lite` chain (upload → load → dbt → suspend) | Planned |
+| 33 | Buffer/fix — load errors, schema drift | Planned |
+| 34 | Document Snowflake load in README / cost_controls | Planned |
+| 35 | Week 5 sign-off — guardrails + load + suspend verified | Planned |
 
 ## Week 6: Monitoring, dashboard, CI, polish
 

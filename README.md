@@ -292,7 +292,7 @@ make quality-gate   # ~2–3 min; compileall + stack health + sample/layer check
 
 See [docs/testing.md](docs/testing.md) for the full comparison of `quick-test`, `local-demo-100k`, `local-demo-1m`, `verify-1m`, and `quality-gate`.
 
-> **Week 3 cloud-lite (S3) is complete.** Curated `data/gold/` uploads to S3 via `make upload-gold-s3`. Raw, bronze, and silver stay local. Snowflake starts Week 4 after cost guardrails. Details: [docs/cloud_lite_s3.md](docs/cloud_lite_s3.md).
+> **Week 3 cloud-lite (S3) is complete.** Curated `data/gold/` uploads to S3 via `make upload-gold-s3`. Raw, bronze, and silver stay local. **Week 4:** Snowflake cost guardrails via `make snowflake-guardrails` (no data load). Details: [docs/cloud_lite_s3.md](docs/cloud_lite_s3.md), [docs/cost_controls.md](docs/cost_controls.md).
 
 ### AWS S3 cloud-lite (Week 3 — complete)
 
@@ -320,6 +320,52 @@ make upload-gold-s3             # upload to s3://{AWS_S3_BUCKET}/gold/
 ```
 
 Uses dedicated upload user credentials (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`) from `.env`.
+
+### Snowflake budget guardrails (Week 4 — no data load)
+
+Bootstrap cost controls **before** any Snowflake load (Week 5). Heavy processing stays local in Spark; Snowflake receives only curated gold marts later.
+
+| Guardrail | Value |
+|-----------|-------|
+| Warehouse | `DE_PROJECT_WH` only |
+| Size | `XSMALL` |
+| Auto-suspend | 60 seconds |
+| Auto-resume | `TRUE` |
+| Initially suspended | `TRUE` |
+| Resource monitor | `DE_PROJECT_MONITOR` |
+| Monthly credit quota | 3 credits |
+| Notify | 50%, 80% |
+| Suspend | 100% |
+| Suspend immediate | 110% |
+| Database | `COMMERCESTREAM_DB` |
+| Schemas | `RAW`, `STAGING`, `MARTS`, `MONITORING` |
+
+```bash
+# Set SNOWFLAKE_ACCOUNT, SNOWFLAKE_USER, SNOWFLAKE_PASSWORD, SNOWFLAKE_ROLE in .env
+make snowflake-guardrails        # create warehouse, monitor, DB/schemas, suspend, verify
+make snowflake-check-guardrails  # re-check settings
+make snowflake-suspend           # explicit suspend after any session
+```
+
+**No data loading until Week 5** — no `COPY INTO`, no dbt, no raw/bronze/silver in Snowflake. Every workflow ends with `make snowflake-suspend`.
+
+SQL scripts: `sql/admin/`. Details: [docs/cost_controls.md](docs/cost_controls.md).
+
+**Week 4 Days 26–28 (scaffold, no load):**
+
+```bash
+# Day 26 — after IAM role setup (infra/snowflake/README.md)
+make snowflake-stage-setup
+make snowflake-check-stage
+
+# Day 27 — dbt scaffold only; do not run dbt build yet
+# See dbt/commercestream/README.md
+
+# Day 28 — prerequisites check
+make week5-load-dry-run
+```
+
+Week 5 load plan: [docs/week5_load_plan.md](docs/week5_load_plan.md).
 
 ## Build plan
 

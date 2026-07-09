@@ -1,0 +1,29 @@
+name: commercestream
+version: "1.0.0"
+config-version: 2
+
+profile: commercestream
+
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+clean-targets:
+  - target
+  - dbt_packages
+
+models:
+  commercestream:
+    staging:
+      +schema: STAGING
+      +materialized: view
+    marts:
+      +schema: MARTS
+      +materialized: table
+
+vars:
+  # Week 5: gold tables loaded into STAGING from S3 stage
+  gold_database: COMMERCESTREAM_DB

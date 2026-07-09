@@ -6,7 +6,11 @@
 	transform-purchase-marts validate-purchase-marts smoke-test-purchase-marts \
 	transform-funnel-marts validate-funnel-marts smoke-test-funnel-marts \
 	validate-pipeline validate-gold transform-gold reset-demo-state wait-for-stack verify-1m quality-gate upload-gold-s3 upload-gold-s3-dry-run \
+	snowflake-guardrails snowflake-check-guardrails snowflake-suspend \
+	snowflake-stage-setup snowflake-check-stage week5-load-dry-run \
 	smoke-test-10k smoke-test-100k quick-test local-demo-100k local-demo-1m venv
+
+SNOWSQL ?= snowsql
 
 PYTHON ?= .venv/bin/python3
 SPARK_MASTER_DOCKER ?= spark://spark-master:7077
@@ -77,6 +81,13 @@ help:
 	@echo "  make quality-gate        Full local Weeks 1–2 quality gate (~2–3 min)"
 	@echo "  make upload-gold-s3      Upload curated data/gold/ to S3"
 	@echo "  make upload-gold-s3-dry-run  Preview gold upload (no S3 calls)"
+	@echo ""
+	@echo "  make snowflake-guardrails      Bootstrap Snowflake cost guardrails (no data load)"
+	@echo "  make snowflake-check-guardrails  Verify warehouse/monitor/database settings"
+	@echo "  make snowflake-suspend         Suspend DE_PROJECT_WH"
+	@echo "  make snowflake-stage-setup     S3 storage integration + external stage (no load)"
+	@echo "  make snowflake-check-stage     Verify stage objects"
+	@echo "  make week5-load-dry-run        Check Week 5 prerequisites (no load)"
 	@echo "  make reset-demo-state    Wipe pipeline outputs for a clean demo run"
 	@echo ""
 	@echo "Optional Postgres (Airflow): docker compose --profile airflow up -d"
@@ -308,6 +319,55 @@ upload-gold-s3-dry-run:
 	@test -f .env || (echo "Missing .env — cp .env.example .env and set AWS_S3_BUCKET" && exit 1)
 	@set -a && . ./.env && set +a && \
 		$(PYTHON) src/utils/upload_gold_to_s3.py --dry-run
+
+snowflake-guardrails:
+	@test -f .env || (echo "Missing .env — cp .env.example .env and set Snowflake credentials" && exit 1)
+	@set -a && . ./.env && set +a && \
+		test -n "$$SNOWFLAKE_ACCOUNT" && test -n "$$SNOWFLAKE_USER" && test -n "$$SNOWFLAKE_ROLE" || \
+		(echo "Set SNOWFLAKE_ACCOUNT, SNOWFLAKE_USER, SNOWFLAKE_ROLE in .env" && exit 1) && \
+		export SNOWSQL_PWD="$$SNOWFLAKE_PASSWORD" && \
+		$(SNOWSQL) -a "$$SNOWFLAKE_ACCOUNT" -u "$$SNOWFLAKE_USER" -r "$$SNOWFLAKE_ROLE" \
+			-o exit_on_error=true -f sql/admin/run_guardrails_in_order.sql
+
+snowflake-check-guardrails:
+	@test -f .env || (echo "Missing .env — cp .env.example .env and set Snowflake credentials" && exit 1)
+	@set -a && . ./.env && set +a && \
+		export SNOWSQL_PWD="$$SNOWFLAKE_PASSWORD" && \
+		$(SNOWSQL) -a "$$SNOWFLAKE_ACCOUNT" -u "$$SNOWFLAKE_USER" -r "$$SNOWFLAKE_ROLE" \
+			-o exit_on_error=true -f sql/admin/05_check_snowflake_guardrails.sql
+
+snowflake-suspend:
+	@test -f .env || (echo "Missing .env — cp .env.example .env and set Snowflake credentials" && exit 1)
+	@set -a && . ./.env && set +a && \
+		export SNOWSQL_PWD="$$SNOWFLAKE_PASSWORD" && \
+		$(SNOWSQL) -a "$$SNOWFLAKE_ACCOUNT" -u "$$SNOWFLAKE_USER" -r "$$SNOWFLAKE_ROLE" \
+			-o exit_on_error=true -f sql/admin/04_suspend_warehouse.sql
+
+snowflake-stage-setup:
+	@test -f .env || (echo "Missing .env — cp .env.example .env" && exit 1)
+	@set -a && . ./.env && set +a && \
+		test -n "$$SNOWFLAKE_ACCOUNT" && test -n "$$SNOWFLAKE_USER" && test -n "$$SNOWFLAKE_ROLE" && \
+		test -n "$$AWS_S3_BUCKET" && test -n "$$SNOWFLAKE_S3_STORAGE_AWS_ROLE_ARN" || \
+		(echo "Set SNOWFLAKE_* , AWS_S3_BUCKET, SNOWFLAKE_S3_STORAGE_AWS_ROLE_ARN — see infra/snowflake/README.md" && exit 1) && \
+		export SNOWSQL_PWD="$$SNOWFLAKE_PASSWORD" && \
+		$(SNOWSQL) -a "$$SNOWFLAKE_ACCOUNT" -u "$$SNOWFLAKE_USER" -r "$$SNOWFLAKE_ROLE" \
+			-o exit_on_error=true \
+			-D aws_s3_bucket="$$AWS_S3_BUCKET" \
+			-D aws_role_arn="$$SNOWFLAKE_S3_STORAGE_AWS_ROLE_ARN" \
+			-f sql/snowflake/run_stage_setup.sql && \
+		$(MAKE) snowflake-suspend
+
+snowflake-check-stage:
+	@test -f .env || (echo "Missing .env — cp .env.example .env" && exit 1)
+	@set -a && . ./.env && set +a && \
+		export SNOWSQL_PWD="$$SNOWFLAKE_PASSWORD" && \
+		$(SNOWSQL) -a "$$SNOWFLAKE_ACCOUNT" -u "$$SNOWFLAKE_USER" -r "$$SNOWFLAKE_ROLE" \
+			-o exit_on_error=true -f sql/snowflake/04_verify_stage_setup.sql && \
+		$(MAKE) snowflake-suspend
+
+week5-load-dry-run:
+	@chmod +x scripts/dry_run_week5_load.sh
+	@./scripts/dry_run_week5_load.sh
 
 smoke-test-10k:
 	$(MAKE) produce-10k

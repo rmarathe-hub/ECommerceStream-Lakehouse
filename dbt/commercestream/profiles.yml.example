@@ -1,0 +1,17 @@
+# Copy to ~/.dbt/profiles.yml (or merge under profiles:).
+# Do not commit real passwords. Week 5: run dbt only after gold load.
+
+commercestream:
+  target: dev
+  outputs:
+    dev:
+      type: snowflake
+      account: "{{ env_var('SNOWFLAKE_ACCOUNT') }}"
+      user: "{{ env_var('SNOWFLAKE_USER') }}"
+      password: "{{ env_var('SNOWFLAKE_PASSWORD') }}"
+      role: "{{ env_var('SNOWFLAKE_ROLE', 'ACCOUNTADMIN') }}"
+      database: COMMERCESTREAM_DB
+      warehouse: DE_PROJECT_WH
+      schema: MARTS
+      threads: 1
+      client_session_keep_alive: false

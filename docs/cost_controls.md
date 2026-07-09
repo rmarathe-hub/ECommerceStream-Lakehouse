@@ -27,6 +27,37 @@ See also: [architecture.md](architecture.md)
 
 These settings must be in place **before loading any data** into Snowflake.
 
+**Bootstrap (no data load):**
+
+```bash
+make snowflake-guardrails        # create warehouse, monitor, database/schemas, suspend
+make snowflake-check-guardrails  # SHOW warehouses, monitors, schemas
+make snowflake-suspend           # explicit suspend after any session
+```
+
+SQL scripts: `sql/admin/` — see [sql/admin/README.md](../sql/admin/README.md).
+
+### Guardrail summary (automated)
+
+| Setting | Value |
+|---------|-------|
+| Warehouse | `DE_PROJECT_WH` only (one project warehouse) |
+| Size | `XSMALL` |
+| Auto-suspend | 60 seconds |
+| Auto-resume | `TRUE` |
+| Initially suspended | `TRUE` |
+| Resource monitor | `DE_PROJECT_MONITOR` |
+| Monthly credit quota | 3 credits |
+| Notify | 50%, 80% |
+| Suspend | 100% |
+| Suspend immediate | 110% |
+| Database | `COMMERCESTREAM_DB` |
+| Schemas | `RAW`, `STAGING`, `MARTS`, `MONITORING` |
+
+**Data policy:** Heavy processing stays local in Spark. Snowflake receives **only curated gold marts** (Week 5+). No raw, bronze, or silver data is loaded to Snowflake.
+
+**Session rule:** Every workflow ends with `ALTER WAREHOUSE DE_PROJECT_WH SUSPEND` (`make snowflake-suspend`).
+
 ### 1. One X-Small warehouse only
 
 ```sql
@@ -65,12 +96,12 @@ After creation or manual suspend, the warehouse must not sit running idle.
 
 ```sql
 CREATE OR REPLACE RESOURCE MONITOR DE_PROJECT_MONITOR
-  WITH CREDIT_QUOTA = 2   -- ~$6 cap at $3/credit; use 3 if ~$2/credit
+  WITH CREDIT_QUOTA = 3
   FREQUENCY = MONTHLY
   START_TIMESTAMP = IMMEDIATELY
   TRIGGERS
     ON 50 PERCENT DO NOTIFY
-    ON 75 PERCENT DO NOTIFY
+    ON 80 PERCENT DO NOTIFY
     ON 100 PERCENT DO SUSPEND
     ON 110 PERCENT DO SUSPEND_IMMEDIATE;
 
@@ -84,9 +115,8 @@ Resource monitors suspend warehouses at the credit threshold. They do **not** ca
 | Target            | Setting                          |
 |-------------------|----------------------------------|
 | Normal spend      | $2–6/month                       |
-| Hard cap          | $6/month via `CREDIT_QUOTA`      |
-| ~$3/credit        | `CREDIT_QUOTA = 2`               |
-| ~$2/credit        | `CREDIT_QUOTA = 3`               |
+| Hard cap          | $6/month via `CREDIT_QUOTA = 3` |
+| ~$2/credit        | `CREDIT_QUOTA = 3` → ~$6 cap   |
 
 ### 6. Heavy Spark processing runs locally
 
@@ -249,10 +279,10 @@ dbt-build:
 	make suspend-snowflake
 
 suspend-snowflake:
-	snowsql -f sql/admin/suspend_warehouse.sql
+	snowsql -f sql/admin/04_suspend_warehouse.sql
 
 check-snowflake-guards:
-	snowsql -f sql/admin/check_warehouse_settings.sql
+	snowsql -f sql/admin/05_check_snowflake_guardrails.sql
 
 check-snowflake-usage:
 	snowsql -f sql/admin/check_warehouse_usage.sql
@@ -280,7 +310,7 @@ Even if you forget to suspend manually, the command sequence should do it for yo
 1. **Week 0** — This document (you are here).  
 2. **Weeks 1–2** — Build and validate entirely locally. No Snowflake.  
 3. **Week 3** — S3 only; upload gold outputs. No Snowflake.  
-4. **Week 4** — Create Snowflake guardrails; verify before any load.  
+4. **Week 4** — Create Snowflake guardrails; stage + dbt scaffold; verify before any load.  
 5. **Week 5** — Load curated gold + dbt; suspend after every run.  
 6. **Week 6** — Manual CI with `if: always()` suspend step.
 

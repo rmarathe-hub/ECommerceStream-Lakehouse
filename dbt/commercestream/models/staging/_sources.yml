@@ -1,0 +1,20 @@
+version: 2
+
+sources:
+  - name: gold_staging
+    description: >
+      Curated Spark gold marts loaded from S3 (Week 5 COPY INTO).
+      No raw, bronze, or silver data in Snowflake.
+    database: "{{ var('gold_database', 'COMMERCESTREAM_DB') }}"
+    schema: STAGING
+    tables:
+      - name: fct_sessions
+        description: Session facts from local Spark gold mart
+      - name: fct_purchases
+        description: Purchase line facts
+      - name: agg_product_performance
+        description: Product-level aggregates
+      - name: agg_conversion_funnel
+        description: Funnel step aggregates
+      - name: fct_cart_abandonment
+        description: Abandoned cart events
