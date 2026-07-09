@@ -97,4 +97,4 @@ For `make quality-gate` on an existing 1M pipeline, Docker should be running but
 
 ## Week 3 status
 
-**Day 16 complete (scaffold only).** IAM least-privilege upload user is defined in `infra/aws/iam.tf`. **Day 17 complete (scaffold only).** S3 lifecycle rules are parameterized in `infra/aws/s3.tf`. Run `terraform plan` to preview; do **not** `apply` until Day 20. Access keys go in local `.env` only after apply. No upload script yet (`make upload-gold-s3` is Day 19). Snowflake is Week 4+.
+**Day 18 complete (scaffold only).** AWS monthly cost budget with email alerts is defined in `infra/aws/budget.tf`. Add `budget_alert_emails` to `terraform.tfvars` before apply. Do **not** `apply` until Day 20.

@@ -184,7 +184,7 @@ S3 bucket, IAM, lifecycle rules, budget alert, gold-only upload. No Snowflake ye
 | 15 | Terraform S3 bucket scaffold (`infra/aws/`) | Done (scaffold only — no `apply`) |
 | 16 | IAM least-privilege | Done (scaffold only — no `apply`) |
 | 17 | S3 lifecycle rules (refine) | Done (scaffold only — no `apply`) |
-| 18 | AWS budget alert | Planned |
+| 18 | AWS budget alert | Done (scaffold only — no `apply`) |
 | 19 | `upload_gold_to_s3.py` + `make upload-gold-s3` | Planned |
 | 20 | `terraform apply` + S3 smoke test | Planned |
 | 21 | Buffer/fix — no raw uploads | Planned |
@@ -233,6 +233,19 @@ S3 bucket, IAM, lifecycle rules, budget alert, gold-only upload. No Snowflake ye
 - `gold/` retained with no expiration rule
 - `lifecycle_rules` output in `outputs.tf`
 - Updated `infra/aws/README.md` prefix/lifecycle table
+
+**Safe commands only:** `terraform fmt`, `init`, `validate`, `plan` — **no `terraform apply`**.
+
+### Day 18 — AWS budget alert
+
+**Goal:** Monthly AWS cost budget with email notifications for spend guardrails.
+
+**Deliverables:**
+
+- `infra/aws/budget.tf` — `aws_budgets_budget` with 50/80/100% threshold emails
+- Variables: `create_budget_alert`, `budget_monthly_limit_usd`, `budget_alert_emails`, `budget_alert_thresholds`
+- Outputs: `budget_name`, `budget_monthly_limit_usd`, `budget_alert_thresholds`
+- Default limit $5/month; requires at least one email in `terraform.tfvars` to create budget
 
 **Safe commands only:** `terraform fmt`, `init`, `validate`, `plan` — **no `terraform apply`**.
 

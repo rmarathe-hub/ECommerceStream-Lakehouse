@@ -71,3 +71,44 @@ variable "lifecycle_bronze_sample_expiration_days" {
     error_message = "lifecycle_bronze_sample_expiration_days must be at least 1."
   }
 }
+
+variable "create_budget_alert" {
+  description = "Create a monthly AWS cost budget with email notifications."
+  type        = bool
+  default     = true
+}
+
+variable "budget_monthly_limit_usd" {
+  description = "Monthly AWS spend limit (USD) for budget alerts."
+  type        = number
+  default     = 5
+
+  validation {
+    condition     = var.budget_monthly_limit_usd > 0
+    error_message = "budget_monthly_limit_usd must be greater than 0."
+  }
+}
+
+variable "budget_alert_emails" {
+  description = "Email addresses to notify when budget thresholds are exceeded."
+  type        = list(string)
+  default     = []
+
+  validation {
+    condition = alltrue([
+      for email in var.budget_alert_emails : can(regex("^[^@]+@[^@]+\\.[^@]+$", email))
+    ])
+    error_message = "Each budget_alert_emails entry must be a valid email address."
+  }
+}
+
+variable "budget_alert_thresholds" {
+  description = "Budget alert thresholds as percentages of monthly limit (e.g. 50, 80, 100)."
+  type        = list(number)
+  default     = [50, 80, 100]
+
+  validation {
+    condition     = length(var.budget_alert_thresholds) > 0 && alltrue([for t in var.budget_alert_thresholds : t > 0 && t <= 200])
+    error_message = "budget_alert_thresholds must be between 1 and 200 percent."
+  }
+}

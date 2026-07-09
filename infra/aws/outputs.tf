@@ -53,3 +53,18 @@ output "lifecycle_rules" {
     gold_retained                 = true
   }
 }
+
+output "budget_name" {
+  description = "AWS budget name (null if budget alert is disabled or no emails configured)."
+  value       = var.create_budget_alert && length(var.budget_alert_emails) > 0 ? aws_budgets_budget.lakehouse[0].name : null
+}
+
+output "budget_monthly_limit_usd" {
+  description = "Configured monthly AWS budget limit in USD."
+  value       = var.create_budget_alert && length(var.budget_alert_emails) > 0 ? var.budget_monthly_limit_usd : null
+}
+
+output "budget_alert_thresholds" {
+  description = "Budget alert threshold percentages."
+  value       = var.create_budget_alert && length(var.budget_alert_emails) > 0 ? var.budget_alert_thresholds : null
+}

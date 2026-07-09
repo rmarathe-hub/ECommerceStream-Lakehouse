@@ -11,7 +11,7 @@ Terraform defines S3 + IAM resources but **nothing exists in AWS** until you run
 | S3 bucket, encryption, public access block | Defined in `s3.tf` |
 | S3 lifecycle rules (cost control) | Defined in `s3.tf`, parameterized in `variables.tf` |
 | Dedicated upload IAM user | Defined in `iam.tf` |
-| AWS budget alert | Planned Day 18 |
+| AWS budget alert | Defined in `budget.tf` |
 
 Run `terraform plan` to preview — **do not apply yet**. Snowflake guardrails start **Week 4**.
 
@@ -33,6 +33,23 @@ Lifecycle expiration days are set via Terraform variables:
 - `lifecycle_bronze_sample_expiration_days` (default: 30)
 
 After `terraform apply`, see `lifecycle_rules` output for the active configuration.
+
+## AWS cost budget (Day 18)
+
+Monthly account cost budget with email notifications — default **$5/month** at **50%, 80%, and 100%** of limit.
+
+Set in `terraform.tfvars` (gitignored):
+
+```hcl
+create_budget_alert      = true
+budget_monthly_limit_usd = 5
+budget_alert_emails      = ["you@example.com"]
+budget_alert_thresholds  = [50, 80, 100]
+```
+
+The budget is **not created** unless `budget_alert_emails` has at least one address. AWS will send a confirmation email per subscriber on first apply.
+
+Disable with `create_budget_alert = false` if your account does not support AWS Budgets.
 
 ### Upload IAM policy (Day 16)
 
@@ -81,7 +98,8 @@ Prerequisites:
 | `variables.tf` | Region, bucket, IAM, lifecycle expiration variables |
 | `s3.tf` | Bucket, encryption, public access block, lifecycle rules |
 | `iam.tf` | Dedicated upload IAM user, least-privilege policy, optional access key |
-| `outputs.tf` | Bucket, upload user, and `lifecycle_rules` outputs |
+| `budget.tf` | Monthly cost budget with email alerts at 50/80/100% |
+| `outputs.tf` | Bucket, upload user, lifecycle, and budget outputs |
 | `terraform.tfvars.example` | Example variable values (safe to commit) |
 
-AWS budget alert is planned for Day 18.
+Upload script (`make upload-gold-s3`) is planned for Day 19.

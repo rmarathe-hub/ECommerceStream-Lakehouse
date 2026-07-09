@@ -139,7 +139,7 @@ The full dataset may be referenced in docs and architecture diagrams. Default de
   - `checkpoints/` — delete after 7 days (`lifecycle_checkpoints_expiration_days`)
   - `bronze/sample/` — delete after 30 days (`lifecycle_bronze_sample_expiration_days`)
   - `gold/` — no expiration (retained)
-- **Budget alert** — $2–5/month AWS budget notification via Terraform.
+- **Budget alert** — $5/month default AWS budget via Terraform (`infra/aws/budget.tf`); email notifications at 50/80/100%
 
 ---
 

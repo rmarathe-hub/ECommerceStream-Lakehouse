@@ -17,3 +17,9 @@ create_upload_access_key = true
 lifecycle_temp_expiration_days          = 1
 lifecycle_checkpoints_expiration_days   = 7
 lifecycle_bronze_sample_expiration_days = 30
+
+# AWS monthly cost budget (requires email for notifications to be created)
+create_budget_alert      = true
+budget_monthly_limit_usd = 5
+budget_alert_emails      = ["your-email@example.com"]
+budget_alert_thresholds  = [50, 80, 100]
