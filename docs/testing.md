@@ -95,6 +95,6 @@ make sample-1m   # if data/raw/events_1m.csv is missing
 
 For `make quality-gate` on an existing 1M pipeline, Docker should be running but Kafka replay is not required.
 
-## Week 3 status
+## Week 3 status (complete)
 
-**Day 18 complete (scaffold only).** AWS monthly cost budget with email alerts is defined in `infra/aws/budget.tf`. Add `budget_alert_emails` to `terraform.tfvars` before apply. Do **not** `apply` until Day 20.
+**Cloud-lite S3 path is live.** `terraform apply` + `make upload-gold-s3` verified: 225 files, 54.86 MB to `gold/`. See [cloud_lite_s3.md](cloud_lite_s3.md). Snowflake is Week 4+.

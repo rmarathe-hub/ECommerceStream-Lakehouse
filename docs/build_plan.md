@@ -181,13 +181,15 @@ S3 bucket, IAM, lifecycle rules, budget alert, gold-only upload. No Snowflake ye
 
 | Day | Task | Status |
 |-----|------|--------|
-| 15 | Terraform S3 bucket scaffold (`infra/aws/`) | Done (scaffold only — no `apply`) |
-| 16 | IAM least-privilege | Done (scaffold only — no `apply`) |
-| 17 | S3 lifecycle rules (refine) | Done (scaffold only — no `apply`) |
-| 18 | AWS budget alert | Done (scaffold only — no `apply`) |
-| 19 | `upload_gold_to_s3.py` + `make upload-gold-s3` | Planned |
-| 20 | `terraform apply` + S3 smoke test | Planned |
-| 21 | Buffer/fix — no raw uploads | Planned |
+| 15 | Terraform S3 bucket scaffold (`infra/aws/`) | Done |
+| 16 | IAM least-privilege upload user | Done |
+| 17 | S3 lifecycle rules (parameterized) | Done |
+| 18 | AWS budget alert | Done |
+| 19 | `upload_gold_to_s3.py` + `make upload-gold-s3` | Done |
+| 20 | `terraform apply` + S3 smoke test | Done |
+| 21 | Buffer/fix — docs, upload guards | Done |
+
+**Week 3 complete.** See [cloud_lite_s3.md](cloud_lite_s3.md) for smoke test results. Snowflake starts Week 4.
 
 ### Day 15 — Terraform S3 bucket scaffold
 
@@ -248,6 +250,47 @@ S3 bucket, IAM, lifecycle rules, budget alert, gold-only upload. No Snowflake ye
 - Default limit $5/month; requires at least one email in `terraform.tfvars` to create budget
 
 **Safe commands only:** `terraform fmt`, `init`, `validate`, `plan` — **no `terraform apply`**.
+
+### Day 19 — Upload curated gold to S3
+
+**Goal:** Python uploader for `data/gold/` only, with Makefile targets.
+
+**Deliverables:**
+
+- `src/utils/upload_gold_to_s3.py` — uploads `.parquet` and `.json` under `data/gold/` to `s3://{bucket}/gold/`
+- Refuses non-`gold` S3 prefixes and non-gold local paths
+- `make upload-gold-s3` (loads `.env`, uses upload IAM credentials)
+- `make upload-gold-s3-dry-run` — list files without S3 calls
+- `boto3` added to `requirements.txt`
+
+**Prerequisites:** `terraform apply` (Day 20), upload user keys in `.env`, `make verify-1m` gold outputs present.
+
+**Never uploads:** `data/raw/`, bronze, or silver.
+
+### Day 20 — Terraform apply + S3 smoke test
+
+**Goal:** Provision AWS resources and upload curated 1M gold to S3.
+
+**Verified results:**
+
+| Metric | Value |
+|--------|-------|
+| Bucket | `commercestream-lake-rmarathe-us-east-1` |
+| Files uploaded | 225 |
+| Total size | 54.86 MB |
+| S3 prefix | `gold/` |
+| Upload user | `commercestream-lakehouse-uploader` |
+
+### Day 21 — Buffer/fix
+
+**Goal:** Harden upload workflow and document cloud-lite path.
+
+**Deliverables:**
+
+- Upload pre-check uses `list_objects_v2` with `gold/` prefix (compatible with least-privilege IAM)
+- [cloud_lite_s3.md](cloud_lite_s3.md) — smoke test results and command reference
+- [troubleshooting.md](troubleshooting.md) — S3 upload credential errors
+- Architecture doc updated with live S3 stage
 
 ## Week 4: Snowflake cost guardrails
 

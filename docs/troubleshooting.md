@@ -146,3 +146,43 @@ make validate-bronze
 | Verify existing 1M data | `make verify-1m` | ~30–60 sec |
 | Full 1M from scratch | `make local-demo-1m` | ~25–35 min |
 | 5M stress test | `make produce-5m` + transforms | ~1.5+ hours |
+| Gold S3 upload | `make upload-gold-s3` | ~30–60 sec (225 files) |
+
+## S3 gold upload
+
+### `SignatureDoesNotMatch`
+
+Wrong or truncated `AWS_SECRET_ACCESS_KEY` in `.env`. Re-copy from Terraform:
+
+```bash
+cd infra/aws
+terraform output upload_access_key_id
+terraform output -raw upload_secret_access_key | pbcopy
+```
+
+Paste into repo root `.env` with **no quotes**, include every character (e.g. trailing `%` if present in raw output).
+
+Verify from **repo root**:
+
+```bash
+set -a && . ./.env && set +a
+aws sts get-caller-identity
+# Arn should end with: commercestream-lakehouse-uploader
+```
+
+### `Access denied` on bucket check
+
+The upload IAM user cannot use `HeadBucket`. The upload script uses `list_objects` with `gold/` prefix instead. Ensure you use upload user keys in `.env`, not admin `~/.aws/credentials`.
+
+### `NoSuchBucket`
+
+Run `terraform apply` in `infra/aws` before `make upload-gold-s3`.
+
+### Wrong identity when testing
+
+Source `.env` from **repo root**, not `infra/aws`:
+
+```bash
+cd /path/to/ECommerce_Stream_Lakehouse
+set -a && . ./.env && set +a
+```

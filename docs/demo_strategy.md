@@ -6,7 +6,7 @@ This project uses two demo tiers to balance **scale proof** with **cost control*
 
 | Demo | Events | Pipeline scope | S3 upload | Snowflake / dbt |
 |------|--------|----------------|-----------|-----------------|
-| **1M cloud-lite** | 1,000,000 | Full local + cloud | Yes (gold only) | Yes (curated gold) |
+| **1M cloud-lite** | 1,000,000 | Full local + cloud | **Yes** (gold only, verified) | Planned (Week 5) |
 | **5M local stress** | 5,000,000 | Full local only | **No** | **No** |
 | **285M full replay** | 285,000,000 | Documented only | **No** | **No** |
 
@@ -42,7 +42,9 @@ make sample-5m    # -> data/raw/events_5m.csv
 make local-demo-100k        # Week 1: up + produce + bronze + validate
 make local-demo-1m          # Full local 1M: bronze + silver + gold + DQ (~25-35 min)
 make verify-1m              # Re-check existing 1M outputs (~1 min, no replay)
-make cloud-lite             # planned — upload gold, load Snowflake, dbt, suspend
+make upload-gold-s3-dry-run # Preview gold upload (no S3 calls)
+make upload-gold-s3         # Upload curated gold to S3 (verified: 225 files, ~55 MB)
+make cloud-lite             # planned — upload gold + load Snowflake + dbt + suspend
 
 # 5M local stress test (Week 2+, no cloud)
 make local-demo-5m        # planned — producer, bronze, silver, gold, validate only

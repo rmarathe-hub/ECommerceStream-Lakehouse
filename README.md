@@ -46,7 +46,8 @@ ECommerceStream-Lakehouse/
     ├── data_dictionary.md
     ├── demo_strategy.md
     ├── build_plan.md
-    └── testing.md
+    ├── testing.md
+    └── cloud_lite_s3.md
 ```
 
 ## Quick start
@@ -291,21 +292,34 @@ make quality-gate   # ~2–3 min; compileall + stack health + sample/layer check
 
 See [docs/testing.md](docs/testing.md) for the full comparison of `quick-test`, `local-demo-100k`, `local-demo-1m`, `verify-1m`, and `quality-gate`.
 
-> **Week 3 Days 15–16:** Terraform S3 + IAM scaffold is in `infra/aws/` — **no `terraform apply` yet**, no AWS resources created. Dedicated upload user can only write `gold/`, `temp/`, and `checkpoints/`. Raw, bronze, and silver stay local. Snowflake starts Week 4 after cost guardrails.
+> **Week 3 cloud-lite (S3) is complete.** Curated `data/gold/` uploads to S3 via `make upload-gold-s3`. Raw, bronze, and silver stay local. Snowflake starts Week 4 after cost guardrails. Details: [docs/cloud_lite_s3.md](docs/cloud_lite_s3.md).
 
-### AWS S3 + IAM (Week 3 Days 15–16 — scaffold only)
+### AWS S3 cloud-lite (Week 3 — complete)
 
-Terraform defines a cost-controlled S3 bucket for curated gold Parquet. Resources are **not** created until you run `terraform apply` (planned Day 20).
+Terraform in `infra/aws/` provisions bucket, lifecycle rules, upload IAM user, and budget alert. Verified 1M gold upload: **225 files, 54.86 MB** to `s3://{bucket}/gold/`.
 
 ```bash
-cd infra/aws
-cp terraform.tfvars.example terraform.tfvars   # set bucket_name (gitignored)
-terraform fmt -recursive
-terraform init
-terraform plan    # preview only — do not apply yet
+# One-time: terraform apply (see infra/aws/README.md)
+cd infra/aws && terraform apply -var-file=terraform.tfvars
+
+# Copy upload user keys to repo root .env, then:
+make upload-gold-s3-dry-run
+make upload-gold-s3
 ```
 
-See [infra/aws/README.md](infra/aws/README.md) for prefix layout and upload policy.
+See [infra/aws/README.md](infra/aws/README.md) and [docs/cloud_lite_s3.md](docs/cloud_lite_s3.md).
+
+### Upload curated gold to S3
+
+Upload **only** `data/gold/` (Parquet marts + `dq_pipeline_summary.json`). Raw, bronze, and silver stay local.
+
+```bash
+# Prerequisites: terraform apply (Day 20), upload IAM keys in .env, gold outputs exist
+make upload-gold-s3-dry-run   # preview — no S3 calls
+make upload-gold-s3             # upload to s3://{AWS_S3_BUCKET}/gold/
+```
+
+Uses dedicated upload user credentials (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`) from `.env`.
 
 ## Build plan
 

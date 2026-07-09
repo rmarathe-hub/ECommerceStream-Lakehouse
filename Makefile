@@ -5,7 +5,7 @@
 	transform-sessions validate-sessions smoke-test-sessions \
 	transform-purchase-marts validate-purchase-marts smoke-test-purchase-marts \
 	transform-funnel-marts validate-funnel-marts smoke-test-funnel-marts \
-	validate-pipeline validate-gold transform-gold reset-demo-state wait-for-stack verify-1m quality-gate \
+	validate-pipeline validate-gold transform-gold reset-demo-state wait-for-stack verify-1m quality-gate upload-gold-s3 upload-gold-s3-dry-run \
 	smoke-test-10k smoke-test-100k quick-test local-demo-100k local-demo-1m venv
 
 PYTHON ?= .venv/bin/python3
@@ -75,6 +75,8 @@ help:
 	@echo "  make local-demo-1m       Full 1M medallion demo (local only)"
 	@echo "  make verify-1m           DQ check on existing 1M pipeline (~1 min)"
 	@echo "  make quality-gate        Full local Weeks 1–2 quality gate (~2–3 min)"
+	@echo "  make upload-gold-s3      Upload curated data/gold/ to S3"
+	@echo "  make upload-gold-s3-dry-run  Preview gold upload (no S3 calls)"
 	@echo "  make reset-demo-state    Wipe pipeline outputs for a clean demo run"
 	@echo ""
 	@echo "Optional Postgres (Airflow): docker compose --profile airflow up -d"
@@ -295,6 +297,17 @@ verify-1m:
 quality-gate:
 	@chmod +x scripts/run_local_quality_gate.sh
 	@PYTHON=$(PYTHON) ./scripts/run_local_quality_gate.sh
+
+upload-gold-s3:
+	@test -f .env || (echo "Missing .env — cp .env.example .env and set AWS credentials" && exit 1)
+	@test -d data/gold || (echo "Missing data/gold — run the local pipeline first" && exit 1)
+	@set -a && . ./.env && set +a && \
+		$(PYTHON) src/utils/upload_gold_to_s3.py
+
+upload-gold-s3-dry-run:
+	@test -f .env || (echo "Missing .env — cp .env.example .env and set AWS_S3_BUCKET" && exit 1)
+	@set -a && . ./.env && set +a && \
+		$(PYTHON) src/utils/upload_gold_to_s3.py --dry-run
 
 smoke-test-10k:
 	$(MAKE) produce-10k
