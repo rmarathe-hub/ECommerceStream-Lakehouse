@@ -134,11 +134,11 @@ The full dataset may be referenced in docs and architecture diagrams. Default de
 
 - **One S3 bucket** provisioned via Terraform — no EMR, MWAA, Kinesis, or NAT Gateway.
 - **Upload only `data/gold/`** — never upload `data/raw/`, bronze, or silver.
-- **Lifecycle rules** (Week 3):
-  - `temp/` — delete after 1 day
-  - `checkpoints/` — delete after 7 days
-  - `bronze/sample/` — delete after 30 days
-  - `gold/` — retain longer
+- **Lifecycle rules** (Terraform `infra/aws/s3.tf`):
+  - `temp/` — delete after 1 day (configurable via `lifecycle_temp_expiration_days`)
+  - `checkpoints/` — delete after 7 days (`lifecycle_checkpoints_expiration_days`)
+  - `bronze/sample/` — delete after 30 days (`lifecycle_bronze_sample_expiration_days`)
+  - `gold/` — no expiration (retained)
 - **Budget alert** — $2–5/month AWS budget notification via Terraform.
 
 ---

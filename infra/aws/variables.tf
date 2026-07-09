@@ -38,3 +38,36 @@ variable "create_upload_access_key" {
   type        = bool
   default     = true
 }
+
+variable "lifecycle_temp_expiration_days" {
+  description = "Days before objects under temp/ are expired."
+  type        = number
+  default     = 1
+
+  validation {
+    condition     = var.lifecycle_temp_expiration_days >= 1
+    error_message = "lifecycle_temp_expiration_days must be at least 1."
+  }
+}
+
+variable "lifecycle_checkpoints_expiration_days" {
+  description = "Days before objects under checkpoints/ are expired."
+  type        = number
+  default     = 7
+
+  validation {
+    condition     = var.lifecycle_checkpoints_expiration_days >= 1
+    error_message = "lifecycle_checkpoints_expiration_days must be at least 1."
+  }
+}
+
+variable "lifecycle_bronze_sample_expiration_days" {
+  description = "Days before objects under bronze/sample/ are expired."
+  type        = number
+  default     = 30
+
+  validation {
+    condition     = var.lifecycle_bronze_sample_expiration_days >= 1
+    error_message = "lifecycle_bronze_sample_expiration_days must be at least 1."
+  }
+}

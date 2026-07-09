@@ -43,3 +43,13 @@ output "upload_secret_access_key" {
   value       = var.create_upload_user && var.create_upload_access_key ? aws_iam_access_key.uploader[0].secret : null
   sensitive   = true
 }
+
+output "lifecycle_rules" {
+  description = "S3 lifecycle expiration days per prefix (gold/ has no expiration)."
+  value = {
+    temp_expiration_days          = var.lifecycle_temp_expiration_days
+    checkpoints_expiration_days   = var.lifecycle_checkpoints_expiration_days
+    bronze_sample_expiration_days = var.lifecycle_bronze_sample_expiration_days
+    gold_retained                 = true
+  }
+}

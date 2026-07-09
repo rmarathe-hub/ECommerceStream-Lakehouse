@@ -30,11 +30,8 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "lakehouse" {
   }
 }
 
-# Prefix layout (created on first upload; documented for Day 17 lifecycle rules):
-#   gold/           — curated marts only (retain)
-#   temp/           — short-lived uploads (delete after 1 day, Day 17)
-#   checkpoints/    — streaming checkpoints if ever synced (delete after 7 days, Day 17)
-#   bronze/sample/  — optional small samples (delete after 30 days, Day 17)
+# S3 lifecycle — cost control for non-gold prefixes (gold/ is retained indefinitely).
+# See infra/aws/README.md for prefix layout and upload policy.
 
 resource "aws_s3_bucket_lifecycle_configuration" "lakehouse" {
   bucket = aws_s3_bucket.lakehouse.id
@@ -48,7 +45,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "lakehouse" {
     }
 
     expiration {
-      days = 1
+      days = var.lifecycle_temp_expiration_days
     }
   }
 
@@ -61,7 +58,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "lakehouse" {
     }
 
     expiration {
-      days = 7
+      days = var.lifecycle_checkpoints_expiration_days
     }
   }
 
@@ -74,9 +71,9 @@ resource "aws_s3_bucket_lifecycle_configuration" "lakehouse" {
     }
 
     expiration {
-      days = 30
+      days = var.lifecycle_bronze_sample_expiration_days
     }
   }
 
-  # gold/ — no expiration rule; curated outputs retained
+  # gold/ — intentionally no expiration rule; curated outputs retained
 }

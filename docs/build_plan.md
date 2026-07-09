@@ -183,7 +183,7 @@ S3 bucket, IAM, lifecycle rules, budget alert, gold-only upload. No Snowflake ye
 |-----|------|--------|
 | 15 | Terraform S3 bucket scaffold (`infra/aws/`) | Done (scaffold only — no `apply`) |
 | 16 | IAM least-privilege | Done (scaffold only — no `apply`) |
-| 17 | S3 lifecycle rules (refine) | Planned |
+| 17 | S3 lifecycle rules (refine) | Done (scaffold only — no `apply`) |
 | 18 | AWS budget alert | Planned |
 | 19 | `upload_gold_to_s3.py` + `make upload-gold-s3` | Planned |
 | 20 | `terraform apply` + S3 smoke test | Planned |
@@ -221,6 +221,20 @@ S3 bucket, IAM, lifecycle rules, budget alert, gold-only upload. No Snowflake ye
 **Safe commands only:** `terraform fmt`, `init`, `validate`, `plan` — **no `terraform apply`**.
 
 **Day 20:** Run `terraform apply` manually, then copy access keys to local `.env` only.
+
+### Day 17 — S3 lifecycle rules
+
+**Goal:** Parameterize and document S3 lifecycle expiration for cost control.
+
+**Deliverables:**
+
+- Lifecycle variables in `variables.tf` with validation (`lifecycle_*_expiration_days`)
+- `s3.tf` uses variables for `temp/` (1d), `checkpoints/` (7d), `bronze/sample/` (30d)
+- `gold/` retained with no expiration rule
+- `lifecycle_rules` output in `outputs.tf`
+- Updated `infra/aws/README.md` prefix/lifecycle table
+
+**Safe commands only:** `terraform fmt`, `init`, `validate`, `plan` — **no `terraform apply`**.
 
 ## Week 4: Snowflake cost guardrails
 

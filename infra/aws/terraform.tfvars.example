@@ -12,3 +12,8 @@ environment  = "dev"
 create_upload_user       = true
 upload_user_name         = "commercestream-lakehouse-uploader"
 create_upload_access_key = true
+
+# S3 lifecycle expiration (days) — gold/ is never expired
+lifecycle_temp_expiration_days          = 1
+lifecycle_checkpoints_expiration_days   = 7
+lifecycle_bronze_sample_expiration_days = 30
