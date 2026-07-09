@@ -45,7 +45,8 @@ ECommerceStream-Lakehouse/
     ├── cost_controls.md
     ├── data_dictionary.md
     ├── demo_strategy.md
-    └── build_plan.md
+    ├── build_plan.md
+    └── testing.md
 ```
 
 ## Quick start
@@ -175,6 +176,42 @@ make smoke-test-sessions  # transform + validate
 
 Outputs: `data/silver/session_events/`, `data/gold/fct_sessions/`.
 
+### Purchase and product marts
+
+Build purchase fact and product performance gold tables:
+
+```bash
+make transform-purchase-marts   # session_events -> fct_purchases + agg_product_performance
+make validate-purchase-marts    # must print PASSED
+make smoke-test-purchase-marts  # transform + validate
+```
+
+Outputs: `data/gold/fct_purchases/`, `data/gold/agg_product_performance/`.
+
+### Funnel and cart abandonment marts
+
+Build conversion funnel and cart abandonment gold tables:
+
+```bash
+make transform-funnel-marts   # -> agg_conversion_funnel + fct_cart_abandonment
+make validate-funnel-marts    # must print PASSED
+make smoke-test-funnel-marts  # transform + validate
+```
+
+Outputs: `data/gold/agg_conversion_funnel/`, `data/gold/fct_cart_abandonment/`.
+
+### Pipeline data quality
+
+Run full end-to-end DQ checks across all layers:
+
+```bash
+make validate-pipeline   # bronze + silver + gold + cross-layer reconciliation
+make validate-gold       # gold marts only
+make transform-gold      # run all gold transforms (sessions, purchases, funnel)
+```
+
+Writes `data/gold/dq_pipeline_summary.json` with pass/fail per check.
+
 ### Local 100k demo (Week 1)
 
 One command to run the full local streaming path:
@@ -209,6 +246,66 @@ For a clean re-run from scratch (reprocess all Kafka messages into bronze):
 make stream-bronze-reset
 make local-demo-100k
 ```
+
+### Local 1M demo (Week 2)
+
+Full local medallion pipeline at 1M event scale (no cloud upload):
+
+```bash
+make local-demo-1m
+```
+
+This runs:
+
+1. `make up` — start Docker stack
+2. `make reset-demo-state` — fresh Kafka topic + wipe bronze/silver/gold outputs
+3. `make produce-1m` — replay 1M events to Kafka (~15–20 min)
+4. `make stream-bronze` — bronze Parquet
+5. `make transform-silver` — silver cleaning
+6. `make transform-gold` — sessions, purchases, funnel marts
+7. `make validate-pipeline` — full DQ (expects 1M bronze/silver rows)
+
+**Prerequisites:** `data/raw/events_1m.csv` (`make sample-1m`)
+
+**Typical runtime:** ~25–35 minutes.
+
+Re-validate existing 1M outputs without replaying Kafka:
+
+```bash
+make verify-1m    # ~30–60 sec; requires prior successful local-demo-1m
+```
+
+For a clean full re-run from scratch:
+
+```bash
+make local-demo-1m
+```
+
+### Quality gate (Weeks 1–2)
+
+Run production-quality local checks without Kafka replay:
+
+```bash
+make quality-gate   # ~2–3 min; compileall + stack health + sample/layer checks + verify-1m
+```
+
+See [docs/testing.md](docs/testing.md) for the full comparison of `quick-test`, `local-demo-100k`, `local-demo-1m`, `verify-1m`, and `quality-gate`.
+
+> **Week 3 Days 15–16:** Terraform S3 + IAM scaffold is in `infra/aws/` — **no `terraform apply` yet**, no AWS resources created. Dedicated upload user can only write `gold/`, `temp/`, and `checkpoints/`. Raw, bronze, and silver stay local. Snowflake starts Week 4 after cost guardrails.
+
+### AWS S3 + IAM (Week 3 Days 15–16 — scaffold only)
+
+Terraform defines a cost-controlled S3 bucket for curated gold Parquet. Resources are **not** created until you run `terraform apply` (planned Day 20).
+
+```bash
+cd infra/aws
+cp terraform.tfvars.example terraform.tfvars   # set bucket_name (gitignored)
+terraform fmt -recursive
+terraform init
+terraform plan    # preview only — do not apply yet
+```
+
+See [infra/aws/README.md](infra/aws/README.md) for prefix layout and upload policy.
 
 ## Build plan
 

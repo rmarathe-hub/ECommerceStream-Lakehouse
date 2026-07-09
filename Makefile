@@ -3,7 +3,10 @@
 	stream-bronze stream-bronze-reset validate-bronze \
 	transform-silver validate-silver smoke-test-silver \
 	transform-sessions validate-sessions smoke-test-sessions \
-	smoke-test-10k smoke-test-100k quick-test local-demo-100k venv
+	transform-purchase-marts validate-purchase-marts smoke-test-purchase-marts \
+	transform-funnel-marts validate-funnel-marts smoke-test-funnel-marts \
+	validate-pipeline validate-gold transform-gold reset-demo-state wait-for-stack verify-1m quality-gate \
+	smoke-test-10k smoke-test-100k quick-test local-demo-100k local-demo-1m venv
 
 PYTHON ?= .venv/bin/python3
 SPARK_MASTER_DOCKER ?= spark://spark-master:7077
@@ -15,6 +18,15 @@ CHECKPOINT_PATH_DOCKER ?= /opt/data/bronze/checkpoints/kafka_to_bronze
 SILVER_PATH_DOCKER ?= /opt/data/silver/events
 SESSION_EVENTS_PATH_DOCKER ?= /opt/data/silver/session_events
 FCT_SESSIONS_PATH_DOCKER ?= /opt/data/gold/fct_sessions
+FCT_PURCHASES_PATH_DOCKER ?= /opt/data/gold/fct_purchases
+AGG_PRODUCT_PATH_DOCKER ?= /opt/data/gold/agg_product_performance
+AGG_FUNNEL_PATH_DOCKER ?= /opt/data/gold/agg_conversion_funnel
+FCT_CART_ABANDONMENT_PATH_DOCKER ?= /opt/data/gold/fct_cart_abandonment
+MIN_BRONZE_ROWS ?= 1
+MIN_SILVER_ROWS ?= 1
+MIN_SESSIONS ?= 1
+STACK_WAIT_TIMEOUT ?= 120
+STACK_WAIT_INTERVAL ?= 3
 
 help:
 	@echo "ECommerceStream-Lakehouse — available commands"
@@ -45,14 +57,36 @@ help:
 	@echo "  make validate-sessions   Validate sessionization outputs"
 	@echo "  make smoke-test-sessions transform-sessions + validate-sessions"
 	@echo ""
+	@echo "  make transform-purchase-marts  Session events -> purchase + product marts"
+	@echo "  make validate-purchase-marts Validate purchase and product gold tables"
+	@echo "  make smoke-test-purchase-marts transform-purchase-marts + validate"
+	@echo ""
+	@echo "  make transform-funnel-marts   Build conversion funnel + cart abandonment marts"
+	@echo "  make validate-funnel-marts    Validate funnel and abandonment outputs"
+	@echo "  make smoke-test-funnel-marts  transform-funnel-marts + validate"
+	@echo ""
+	@echo "  make validate-pipeline   Full DQ across bronze/silver/gold"
+	@echo "  make validate-gold       Gold-only DQ + cross-layer checks"
+	@echo "  make transform-gold      Run all gold transforms"
+	@echo ""
 	@echo "  make quick-test          produce-10k + stream + validate"
 	@echo "  make smoke-test-100k     produce-100k + stream + validate"
 	@echo "  make local-demo-100k     up + smoke-test-100k"
+	@echo "  make local-demo-1m       Full 1M medallion demo (local only)"
+	@echo "  make verify-1m           DQ check on existing 1M pipeline (~1 min)"
+	@echo "  make quality-gate        Full local Weeks 1–2 quality gate (~2–3 min)"
+	@echo "  make reset-demo-state    Wipe pipeline outputs for a clean demo run"
 	@echo ""
 	@echo "Optional Postgres (Airflow): docker compose --profile airflow up -d"
 
 up:
-	docker compose up -d --wait
+	docker compose up -d
+	$(MAKE) wait-for-stack
+
+wait-for-stack:
+	@chmod +x scripts/wait_for_stack.sh
+	@STACK_WAIT_TIMEOUT=$(STACK_WAIT_TIMEOUT) STACK_WAIT_INTERVAL=$(STACK_WAIT_INTERVAL) \
+		./scripts/wait_for_stack.sh
 
 down:
 	docker compose down
@@ -103,6 +137,7 @@ produce-5m:
 		--rate-per-second 1000
 
 stream-bronze:
+	docker exec -u 0 spark-master sh -c 'mkdir -p /tmp/spark-ivy/cache && chown -R spark:spark /tmp/spark-ivy'
 	docker exec spark-master /opt/spark/bin/spark-submit \
 		--master $(SPARK_MASTER_DOCKER) \
 		--conf spark.jars.ivy=/tmp/spark-ivy \
@@ -115,6 +150,7 @@ stream-bronze:
 		--checkpoint-path $(CHECKPOINT_PATH_DOCKER)
 
 stream-bronze-reset:
+	docker exec -u 0 spark-master sh -c 'mkdir -p /tmp/spark-ivy/cache && chown -R spark:spark /tmp/spark-ivy'
 	docker exec spark-master /opt/spark/bin/spark-submit \
 		--master $(SPARK_MASTER_DOCKER) \
 		--conf spark.jars.ivy=/tmp/spark-ivy \
@@ -163,6 +199,102 @@ validate-sessions:
 smoke-test-sessions:
 	$(MAKE) transform-sessions
 	$(MAKE) validate-sessions
+
+transform-purchase-marts:
+	docker exec spark-master /opt/spark/bin/spark-submit \
+		--master $(SPARK_MASTER_DOCKER) \
+		/opt/src/transforms/build_purchase_product_marts.py \
+		--session-events-path $(SESSION_EVENTS_PATH_DOCKER) \
+		--purchases-path $(FCT_PURCHASES_PATH_DOCKER) \
+		--product-performance-path $(AGG_PRODUCT_PATH_DOCKER)
+
+validate-purchase-marts:
+	$(PYTHON) src/validation/validate_purchase_marts.py \
+		--session-events-path data/silver/session_events \
+		--purchases-path data/gold/fct_purchases \
+		--product-performance-path data/gold/agg_product_performance
+
+smoke-test-purchase-marts:
+	$(MAKE) transform-purchase-marts
+	$(MAKE) validate-purchase-marts
+
+transform-funnel-marts:
+	docker exec spark-master /opt/spark/bin/spark-submit \
+		--master $(SPARK_MASTER_DOCKER) \
+		/opt/src/transforms/build_funnel_marts.py \
+		--session-events-path $(SESSION_EVENTS_PATH_DOCKER) \
+		--sessions-path $(FCT_SESSIONS_PATH_DOCKER) \
+		--funnel-path $(AGG_FUNNEL_PATH_DOCKER) \
+		--cart-abandonment-path $(FCT_CART_ABANDONMENT_PATH_DOCKER)
+
+validate-funnel-marts:
+	$(PYTHON) src/validation/validate_funnel_marts.py \
+		--sessions-path data/gold/fct_sessions \
+		--funnel-path data/gold/agg_conversion_funnel \
+		--cart-abandonment-path data/gold/fct_cart_abandonment
+
+smoke-test-funnel-marts:
+	$(MAKE) transform-funnel-marts
+	$(MAKE) validate-funnel-marts
+
+transform-gold:
+	$(MAKE) transform-sessions
+	$(MAKE) transform-purchase-marts
+	$(MAKE) transform-funnel-marts
+
+validate-pipeline:
+	$(PYTHON) src/validation/validate_pipeline.py \
+		--min-bronze-rows $(MIN_BRONZE_ROWS) \
+		--min-silver-rows $(MIN_SILVER_ROWS) \
+		--min-sessions $(MIN_SESSIONS)
+
+validate-gold:
+	$(PYTHON) src/validation/validate_pipeline.py --gold-only
+
+reset-demo-state:
+	@echo "Resetting Kafka topic and local pipeline outputs..."
+	docker exec redpanda rpk topic delete ecommerce_events 2>/dev/null || true
+	docker exec redpanda rpk topic create ecommerce_events
+	rm -rf data/bronze/events data/bronze/quarantine data/bronze/checkpoints
+	rm -rf data/silver/events data/silver/session_events
+	rm -rf data/gold/fct_sessions data/gold/fct_purchases data/gold/agg_product_performance
+	rm -rf data/gold/agg_conversion_funnel data/gold/fct_cart_abandonment data/gold/dq_pipeline_summary.json
+	mkdir -p data/bronze/events data/bronze/quarantine data/bronze/checkpoints/kafka_to_bronze
+	mkdir -p data/silver/events data/silver/session_events
+	mkdir -p data/gold/fct_sessions data/gold/fct_purchases data/gold/agg_product_performance
+	mkdir -p data/gold/agg_conversion_funnel data/gold/fct_cart_abandonment
+	@echo "Demo state reset complete."
+
+local-demo-1m:
+	@echo "Starting local 1M medallion demo..."
+	@test -f data/raw/events_1m.csv || (echo "Missing data/raw/events_1m.csv — run: make sample-1m" && exit 1)
+	$(MAKE) up
+	$(MAKE) reset-demo-state
+	@echo ""
+	@echo "Step 1/5: produce 1M events to Kafka (~15-20 min)..."
+	$(MAKE) produce-1m
+	@echo ""
+	@echo "Step 2/5: stream bronze..."
+	$(MAKE) stream-bronze
+	@echo ""
+	@echo "Step 3/5: transform silver..."
+	$(MAKE) transform-silver
+	@echo ""
+	@echo "Step 4/5: transform gold marts..."
+	$(MAKE) transform-gold
+	@echo ""
+	@echo "Step 5/5: validate full pipeline..."
+	$(MAKE) validate-pipeline MIN_BRONZE_ROWS=1000000 MIN_SILVER_ROWS=1000000 MIN_SESSIONS=1
+	@echo ""
+	@echo "Local 1M demo complete."
+
+verify-1m:
+	@echo "Verifying existing 1M pipeline outputs (no Kafka replay)..."
+	$(MAKE) validate-pipeline MIN_BRONZE_ROWS=1000000 MIN_SILVER_ROWS=1000000 MIN_SESSIONS=1
+
+quality-gate:
+	@chmod +x scripts/run_local_quality_gate.sh
+	@PYTHON=$(PYTHON) ./scripts/run_local_quality_gate.sh
 
 smoke-test-10k:
 	$(MAKE) produce-10k

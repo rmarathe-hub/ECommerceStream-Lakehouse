@@ -121,6 +121,94 @@ Written by `src/transforms/silver_sessionize.py`. Partitioned by `session_date`.
 | `converted` | boolean | True if session has a purchase |
 | `gold_processed_at` | timestamp | Gold transform run timestamp |
 
+## Gold purchases (`data/gold/fct_purchases/`)
+
+Written by `src/transforms/build_purchase_product_marts.py`. Partitioned by `purchase_date`.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `purchase_id` | string | Purchase event identifier (`event_id`) |
+| `purchase_ts` | timestamp | Purchase timestamp |
+| `purchase_date` | date | Purchase date |
+| `session_id` | string | Session identifier |
+| `user_id` | long | User identifier |
+| `product_id` | long | Product identifier |
+| `category_id` | long | Category identifier (nullable) |
+| `category_code` | string | Category taxonomy (nullable) |
+| `brand` | string | Brand name (nullable) |
+| `purchase_amount` | double | Purchase price |
+| `event_seq_in_session` | int | Event order within session |
+| `seconds_from_session_start` | long | Seconds after session start |
+| `bronze_ingested_at` | timestamp | Bronze ingestion time |
+| `silver_processed_at` | timestamp | Silver transform time |
+| `gold_processed_at` | timestamp | Gold transform run timestamp |
+
+## Gold product performance (`data/gold/agg_product_performance/`)
+
+Written by `src/transforms/build_purchase_product_marts.py`. One row per product.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `product_id` | long | Product identifier |
+| `category_id` | long | Category identifier (nullable) |
+| `category_code` | string | Category taxonomy (nullable) |
+| `brand` | string | Brand name (nullable) |
+| `view_count` | long | View events |
+| `cart_count` | long | Add-to-cart events |
+| `remove_from_cart_count` | long | Remove-from-cart events |
+| `purchase_count` | long | Purchase events |
+| `unique_viewers` | long | Distinct users who viewed |
+| `unique_cart_adders` | long | Distinct users who added to cart |
+| `unique_purchasers` | long | Distinct users who purchased |
+| `total_revenue` | double | Sum of purchase amounts |
+| `last_event_date` | date | Most recent event date for product |
+| `view_to_purchase_rate` | double | `min(1, purchase_count / view_count)` |
+| `cart_to_purchase_rate` | double | `min(1, purchase_count / cart_count)` |
+| `gold_processed_at` | timestamp | Gold transform run timestamp |
+
+## Gold conversion funnel (`data/gold/agg_conversion_funnel/`)
+
+Written by `src/transforms/build_funnel_marts.py`. Partitioned by `session_date`.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `session_date` | date | Session date |
+| `total_sessions` | long | Total sessions |
+| `sessions_with_view` | long | Sessions with at least one view |
+| `sessions_with_cart` | long | Sessions with at least one cart |
+| `sessions_with_purchase` | long | Sessions with at least one purchase |
+| `view_to_cart_sessions` | long | Sessions with view before cart |
+| `cart_to_purchase_sessions` | long | Sessions with cart before purchase |
+| `view_to_purchase_sessions` | long | Sessions with view before purchase |
+| `abandoned_cart_sessions` | long | Sessions with cart but no purchase |
+| `view_to_cart_rate` | double | `view_to_cart_sessions / sessions_with_view` |
+| `cart_to_purchase_rate` | double | `cart_to_purchase_sessions / sessions_with_cart` |
+| `view_to_purchase_rate` | double | `view_to_purchase_sessions / sessions_with_view` |
+| `cart_abandonment_rate` | double | `abandoned_cart_sessions / sessions_with_cart` |
+| `gold_processed_at` | timestamp | Gold transform run timestamp |
+
+## Gold cart abandonment (`data/gold/fct_cart_abandonment/`)
+
+Written by `src/transforms/build_funnel_marts.py`. Partitioned by `session_date`.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `session_id` | string | Session identifier |
+| `user_id` | long | User identifier |
+| `session_date` | date | Session date |
+| `session_start_ts` | timestamp | Session start |
+| `session_end_ts` | timestamp | Session end |
+| `session_duration_seconds` | long | Session length in seconds |
+| `view_count` | long | View events in session |
+| `cart_count` | long | Cart events in session |
+| `remove_from_cart_count` | long | Remove-from-cart events |
+| `cart_event_count` | long | Cart events (from session events) |
+| `distinct_products_carted` | long | Unique products added to cart |
+| `first_cart_ts` | timestamp | First cart event timestamp |
+| `last_cart_ts` | timestamp | Last cart event timestamp |
+| `abandoned` | boolean | Always true |
+| `gold_processed_at` | timestamp | Gold transform run timestamp |
+
 ## Planned layers
 
 | Layer  | Location              | Description                          |

@@ -1,0 +1,14 @@
+# Copy to terraform.tfvars (gitignored) and adjust for your account.
+# cp terraform.tfvars.example terraform.tfvars
+#
+# Do not commit terraform.tfvars — it may contain account-specific names.
+
+region       = "us-east-1"
+bucket_name  = "commercestream-lake-YOUR-NAME-us-east-1"
+project_name = "ECommerceStream-Lakehouse"
+environment  = "dev"
+
+# Dedicated upload user (Option A — least privilege)
+create_upload_user       = true
+upload_user_name         = "commercestream-lakehouse-uploader"
+create_upload_access_key = true

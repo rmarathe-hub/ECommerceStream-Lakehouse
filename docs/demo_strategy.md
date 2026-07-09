@@ -40,7 +40,8 @@ make sample-5m    # -> data/raw/events_5m.csv
 
 # 1M end-to-end (Weeks 1–6, includes cloud-lite)
 make local-demo-100k        # Week 1: up + produce + bronze + validate
-make local-demo-1m          # planned
+make local-demo-1m          # Full local 1M: bronze + silver + gold + DQ (~25-35 min)
+make verify-1m              # Re-check existing 1M outputs (~1 min, no replay)
 make cloud-lite             # planned — upload gold, load Snowflake, dbt, suspend
 
 # 5M local stress test (Week 2+, no cloud)

@@ -1,8 +1,19 @@
-# Troubleshooting (Week 1)
+# Troubleshooting
 
-Common issues when running the local streaming stack.
+Common issues when running the local streaming lakehouse stack.
 
 ## Docker stack
+
+### `make up` hangs or never returns
+
+Do **not** use `docker compose wait` on long-running services (Redpanda, Spark, MinIO) — it waits for containers to **exit**, which never happens.
+
+This project uses `scripts/wait_for_stack.sh`, which polls healthchecks until ready (default timeout: 120s):
+
+```bash
+make up          # docker compose up -d + wait-for-stack
+make wait-for-stack   # poll only (stack already running)
+```
 
 ### `make up` fails or containers unhealthy
 
@@ -21,12 +32,22 @@ docker compose logs spark-master --tail 50
 
 ### Spark `spark-submit` Ivy / permission errors
 
-Symptom: `FileNotFoundException` under `/home/spark/.ivy2/cache`
+Symptoms:
 
-Fix: Makefile uses `--conf spark.jars.ivy=/tmp/spark-ivy` and a persistent Docker volume. Run:
+- `FileNotFoundException` under `/home/spark/.ivy2/cache`
+- `Permission denied` on `/tmp/spark-ivy/cache`
+
+Fix: Makefile sets `--conf spark.jars.ivy=/tmp/spark-ivy`, uses a persistent Docker volume, and fixes ownership before submit:
 
 ```bash
 make up
+make stream-bronze
+```
+
+If permissions are still broken after a volume recreate:
+
+```bash
+docker exec -u 0 spark-master sh -c 'mkdir -p /tmp/spark-ivy/cache && chown -R spark:spark /tmp/spark-ivy'
 make stream-bronze
 ```
 
@@ -43,9 +64,9 @@ make ps   # redpanda should be healthy
 
 ### `produce-100k` is slow (~25 min)
 
-You're on the old per-message ack path. Ensure Day 3.5 optimization is in `replay_events.py` (batch flush). Expected: **~2–3 min** for 100k.
+You're on the old per-message ack path. Ensure batch flush optimization is in `replay_events.py`. Expected: **~2–3 min** for 100k.
 
-For quick iteration use:
+For quick iteration:
 
 ```bash
 make produce-10k
@@ -77,6 +98,27 @@ make stream-bronze-reset
 make smoke-test-100k
 ```
 
+## Silver / gold transforms
+
+### Silver row count lower than bronze
+
+Expected when bronze contains duplicate `event_id`s from repeated Kafka replays. Silver deduplicates by `event_id` (latest offset wins).
+
+For a clean 1M run:
+
+```bash
+make reset-demo-state
+make local-demo-1m
+```
+
+### Re-validate 1M outputs without replaying Kafka (~1 min)
+
+If you already ran `local-demo-1m` successfully:
+
+```bash
+make verify-1m
+```
+
 ## Validation
 
 ### `No module named 'pyarrow'`
@@ -95,10 +137,12 @@ make stream-bronze
 make validate-bronze
 ```
 
-## Quick dev loop vs full demo
+## Command timing guide
 
-| Goal | Command | Time |
-|------|---------|------|
+| Goal | Command | Typical time |
+|------|---------|--------------|
 | Fast debug | `make quick-test` | ~30–60 sec |
-| Full Week 1 demo | `make local-demo-100k` | ~3–5 min |
-| 1M milestone | `make produce-1m` + pipeline | ~25+ min |
+| Week 1 demo | `make local-demo-100k` | ~3–5 min |
+| Verify existing 1M data | `make verify-1m` | ~30–60 sec |
+| Full 1M from scratch | `make local-demo-1m` | ~25–35 min |
+| 5M stress test | `make produce-5m` + transforms | ~1.5+ hours |
