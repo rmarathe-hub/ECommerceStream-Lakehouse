@@ -7,10 +7,17 @@
 	transform-funnel-marts validate-funnel-marts smoke-test-funnel-marts \
 	validate-pipeline validate-gold transform-gold reset-demo-state wait-for-stack verify-1m quality-gate upload-gold-s3 upload-gold-s3-dry-run \
 	snowflake-guardrails snowflake-check-guardrails snowflake-suspend \
-	snowflake-stage-setup snowflake-check-stage week5-load-dry-run \
+	snowflake-stage-setup snowflake-check-stage snowflake-stage-list \
+	snowflake-load-gold snowflake-verify-load dbt-build cloud-lite week5-load-dry-run \
+	dashboard dashboard-install \
 	smoke-test-10k smoke-test-100k quick-test local-demo-100k local-demo-1m venv
 
 SNOWSQL ?= snowsql
+DBT ?= .venv-dbt/bin/dbt
+DBT_PROJECT_DIR ?= dbt/commercestream
+DBT_PROFILES_DIR ?= $(HOME)/.dbt
+DASHBOARD_PYTHON ?= .venv-dbt/bin/python
+STREAMLIT ?= .venv-dbt/bin/streamlit
 
 PYTHON ?= .venv/bin/python3
 SPARK_MASTER_DOCKER ?= spark://spark-master:7077
@@ -87,7 +94,14 @@ help:
 	@echo "  make snowflake-suspend         Suspend DE_PROJECT_WH"
 	@echo "  make snowflake-stage-setup     S3 storage integration + external stage (no load)"
 	@echo "  make snowflake-check-stage     Verify stage objects"
+	@echo "  make snowflake-stage-list      LIST gold files on stage (no COPY INTO)"
+	@echo "  make snowflake-load-gold       COPY INTO curated gold tables (STAGING)"
+	@echo "  make snowflake-verify-load     Row counts for loaded gold tables"
+	@echo "  make dbt-build                 dbt build via .venv-dbt + suspend"
+	@echo "  make cloud-lite               upload → load → dbt → suspend"
 	@echo "  make week5-load-dry-run        Check Week 5 prerequisites (no load)"
+	@echo "  make dashboard-install         Install Streamlit deps into .venv-dbt"
+	@echo "  make dashboard                 Launch Streamlit marts dashboard"
 	@echo "  make reset-demo-state    Wipe pipeline outputs for a clean demo run"
 	@echo ""
 	@echo "Optional Postgres (Airflow): docker compose --profile airflow up -d"
@@ -334,7 +348,8 @@ snowflake-check-guardrails:
 	@set -a && . ./.env && set +a && \
 		export SNOWSQL_PWD="$$SNOWFLAKE_PASSWORD" && \
 		$(SNOWSQL) -a "$$SNOWFLAKE_ACCOUNT" -u "$$SNOWFLAKE_USER" -r "$$SNOWFLAKE_ROLE" \
-			-o exit_on_error=true -f sql/admin/05_check_snowflake_guardrails.sql
+			-o exit_on_error=true -f sql/admin/05_check_snowflake_guardrails.sql && \
+		$(MAKE) snowflake-suspend
 
 snowflake-suspend:
 	@test -f .env || (echo "Missing .env — cp .env.example .env and set Snowflake credentials" && exit 1)
@@ -364,6 +379,59 @@ snowflake-check-stage:
 		$(SNOWSQL) -a "$$SNOWFLAKE_ACCOUNT" -u "$$SNOWFLAKE_USER" -r "$$SNOWFLAKE_ROLE" \
 			-o exit_on_error=true -f sql/snowflake/04_verify_stage_setup.sql && \
 		$(MAKE) snowflake-suspend
+
+snowflake-stage-list:
+	@test -f .env || (echo "Missing .env — cp .env.example .env" && exit 1)
+	@set -a && . ./.env && set +a && \
+		export SNOWSQL_PWD="$$SNOWFLAKE_PASSWORD" && \
+		$(SNOWSQL) -a "$$SNOWFLAKE_ACCOUNT" -u "$$SNOWFLAKE_USER" -r "$$SNOWFLAKE_ROLE" \
+			-o exit_on_error=true -f sql/snowflake/06_list_gold_stage.sql && \
+		$(MAKE) snowflake-suspend
+
+snowflake-load-gold:
+	@test -f .env || (echo "Missing .env — cp .env.example .env" && exit 1)
+	@set -a && . ./.env && set +a && \
+		test -n "$$SNOWFLAKE_ACCOUNT" && test -n "$$SNOWFLAKE_USER" && test -n "$$SNOWFLAKE_ROLE" || \
+		(echo "Set SNOWFLAKE_ACCOUNT, SNOWFLAKE_USER, SNOWFLAKE_ROLE in .env" && exit 1) && \
+		export SNOWSQL_PWD="$$SNOWFLAKE_PASSWORD" && \
+		$(SNOWSQL) -a "$$SNOWFLAKE_ACCOUNT" -u "$$SNOWFLAKE_USER" -r "$$SNOWFLAKE_ROLE" \
+			-o exit_on_error=true -f sql/snowflake/run_load_gold.sql && \
+		$(MAKE) snowflake-suspend
+
+snowflake-verify-load:
+	@test -f .env || (echo "Missing .env — cp .env.example .env" && exit 1)
+	@set -a && . ./.env && set +a && \
+		export SNOWSQL_PWD="$$SNOWFLAKE_PASSWORD" && \
+		$(SNOWSQL) -a "$$SNOWFLAKE_ACCOUNT" -u "$$SNOWFLAKE_USER" -r "$$SNOWFLAKE_ROLE" \
+			-o exit_on_error=true -f sql/snowflake/07_verify_gold_load.sql && \
+		$(MAKE) snowflake-suspend
+
+dbt-build:
+	@test -x $(DBT) || (echo "Missing $(DBT) — create .venv-dbt and install dbt-snowflake" && exit 1)
+	@test -f .env || (echo "Missing .env — cp .env.example .env" && exit 1)
+	@set -a && . ./.env && set +a && \
+		$(DBT) build --project-dir $(DBT_PROJECT_DIR) --profiles-dir $(DBT_PROFILES_DIR); \
+		status=$$?; \
+		$(MAKE) snowflake-suspend; \
+		exit $$status
+
+cloud-lite:
+	@echo "Cloud-lite: upload gold → Snowflake load → dbt → suspend"
+	$(MAKE) upload-gold-s3
+	$(MAKE) snowflake-load-gold
+	$(MAKE) dbt-build
+	@echo "Cloud-lite complete. Warehouse should be suspended."
+
+dashboard-install:
+	@test -x $(DASHBOARD_PYTHON) || (echo "Missing .venv-dbt — create it and install dbt-snowflake first" && exit 1)
+	$(DASHBOARD_PYTHON) -m pip install -r dashboards/streamlit/requirements.txt
+
+dashboard:
+	@test -x $(STREAMLIT) || (echo "Run make dashboard-install first" && exit 1)
+	@test -f .env || (echo "Missing .env with SNOWFLAKE_* credentials" && exit 1)
+	@echo "Starting Streamlit on http://localhost:8501 — run make snowflake-suspend when done"
+	@set -a && . ./.env && set +a && \
+		$(STREAMLIT) run dashboards/streamlit/app.py --server.headless true
 
 week5-load-dry-run:
 	@chmod +x scripts/dry_run_week5_load.sh

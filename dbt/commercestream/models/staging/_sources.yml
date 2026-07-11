@@ -3,18 +3,87 @@ version: 2
 sources:
   - name: gold_staging
     description: >
-      Curated Spark gold marts loaded from S3 (Week 5 COPY INTO).
+      Curated Spark gold marts loaded from S3 via COPY INTO.
       No raw, bronze, or silver data in Snowflake.
     database: "{{ var('gold_database', 'COMMERCESTREAM_DB') }}"
     schema: STAGING
     tables:
       - name: fct_sessions
         description: Session facts from local Spark gold mart
+        columns:
+          - name: session_id
+            description: Session identifier
+            tests:
+              - not_null
+              - unique
+          - name: user_id
+            tests:
+              - not_null
+          - name: session_date
+            description: Hive partition column parsed from S3 path
+            tests:
+              - not_null
+          - name: session_revenue
+            tests:
+              - not_null
+          - name: converted
+            tests:
+              - not_null
+
       - name: fct_purchases
         description: Purchase line facts
+        columns:
+          - name: purchase_id
+            description: Purchase event identifier
+            tests:
+              - not_null
+              - unique
+          - name: purchase_date
+            description: Hive partition column parsed from S3 path
+            tests:
+              - not_null
+          - name: purchase_amount
+            tests:
+              - not_null
+          - name: session_id
+            tests:
+              - not_null
+
       - name: agg_product_performance
         description: Product-level aggregates
+        columns:
+          - name: product_id
+            tests:
+              - not_null
+              - unique
+          - name: total_revenue
+            tests:
+              - not_null
+
       - name: agg_conversion_funnel
-        description: Funnel step aggregates
+        description: Daily conversion funnel aggregates
+        columns:
+          - name: session_date
+            description: Hive partition column parsed from S3 path
+            tests:
+              - not_null
+              - unique
+          - name: total_sessions
+            tests:
+              - not_null
+
       - name: fct_cart_abandonment
-        description: Abandoned cart events
+        description: Abandoned cart sessions
+        columns:
+          - name: session_id
+            tests:
+              - not_null
+              - unique
+          - name: session_date
+            tests:
+              - not_null
+          - name: abandoned
+            tests:
+              - not_null
+              - accepted_values:
+                  values: [true]

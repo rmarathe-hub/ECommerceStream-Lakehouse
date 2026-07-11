@@ -1,0 +1,48 @@
+version: 2
+
+models:
+  - name: stg_fct_sessions
+    description: Staging view over loaded gold fct_sessions
+    columns:
+      - name: session_id
+        tests:
+          - not_null
+          - unique
+      - name: session_date
+        tests:
+          - not_null
+
+  - name: stg_fct_purchases
+    description: Staging view over loaded gold fct_purchases
+    columns:
+      - name: purchase_id
+        tests:
+          - not_null
+          - unique
+      - name: purchase_amount
+        tests:
+          - not_null
+
+  - name: stg_agg_product_performance
+    description: Staging view over loaded gold agg_product_performance
+    columns:
+      - name: product_id
+        tests:
+          - not_null
+          - unique
+
+  - name: stg_agg_conversion_funnel
+    description: Staging view over loaded gold agg_conversion_funnel
+    columns:
+      - name: session_date
+        tests:
+          - not_null
+          - unique
+
+  - name: stg_fct_cart_abandonment
+    description: Staging view over loaded gold fct_cart_abandonment
+    columns:
+      - name: session_id
+        tests:
+          - not_null
+          - unique

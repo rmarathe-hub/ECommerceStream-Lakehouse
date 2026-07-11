@@ -354,20 +354,55 @@ Curated gold only. Explicit `make snowflake-suspend` after every run.
 
 | Day | Task | Status |
 |-----|------|--------|
-| 29 | `COPY INTO` gold tables from `@COMMERCESTREAM_GOLD_STAGE` | Planned |
-| 30 | First `dbt build --select <subset>` | Planned |
-| 31 | Full `dbt build` milestone + mart verification | Planned |
-| 32 | `make cloud-lite` chain (upload → load → dbt → suspend) | Planned |
-| 33 | Buffer/fix — load errors, schema drift | Planned |
-| 34 | Document Snowflake load in README / cost_controls | Planned |
-| 35 | Week 5 sign-off — guardrails + load + suspend verified | Planned |
+| 29 | `COPY INTO` gold tables from `@S3_GOLD_STAGE` | **Done + verified** |
+| 30 | First `dbt build --select <subset>` | **Done + verified** |
+| 31 | Full `dbt build` milestone + mart verification | **Done + verified** (51/51 PASS) |
+| 32 | `make cloud-lite` chain (upload → load → dbt → suspend) | **Done + verified** |
+| 33 | Buffer/fix — load errors, schema drift | Done (aligned to `RAW.S3_GOLD_STAGE`) |
+| 34 | Document Snowflake load in README / cost_controls | Done |
+| 35 | Week 5 sign-off — guardrails + load + suspend verified | **Done** |
+
+**Week 5 complete.** Verified staging rows: 874,457 sessions / 17,405 purchases. See [week5_load_plan.md](week5_load_plan.md).
+
+
+### Day 29 — Load curated gold
+
+**Deliverables:**
+
+- `sql/snowflake/05_load_gold_tables.sql` — create STAGING tables + `COPY INTO` (gold only)
+- `sql/snowflake/06_list_gold_stage.sql` — `LIST` stage files
+- `sql/snowflake/07_verify_gold_load.sql` — row counts
+- `sql/snowflake/run_load_gold.sql` — load + verify runner
+- `make snowflake-load-gold`, `make snowflake-stage-list`, `make snowflake-verify-load`
+
+**Rules:** `DE_PROJECT_WH` only; Hive partitions from path; always `make snowflake-suspend` after.
+
+### Day 30–31 — dbt build
+
+**Deliverables:**
+
+- Explicit staging/mart column selects matching loaded schemas
+- Source + model tests (`not_null`, `unique`, `accepted_values`)
+- `macros/generate_schema_name.sql` — use `STAGING` / `MARTS` as-is
+- `make dbt-build` via **`.venv-dbt`** (not main `.venv`) + suspend
+
+### Day 32 — cloud-lite chain
+
+```bash
+make cloud-lite   # upload-gold-s3 → snowflake-load-gold → dbt-build → suspend
+```
 
 ## Week 6: Monitoring, dashboard, CI, polish
 
-Streamlit/Grafana, manual GitHub Actions, final **1M cloud-lite** demo.
+Streamlit on Snowflake marts, optional CI, final demo polish. **5M local stress is optional and deferred.**
 
-| Day | Task |
-|-----|------|
-| 40 | Final 1M cloud-lite demo run |
-| 41 | Optional **5M local stress** demo (no Snowflake reload) |
-| 42 | README polish + resume bullets |
+| Day | Task | Status |
+|-----|------|--------|
+| 36 | Streamlit dashboard on `MARTS.mart_*` | **Done** |
+| 37 | README case study + resume bullets | **Done** |
+| 38 | Optional: manual GitHub Actions with suspend | Planned |
+| 40 | Final 1M cloud-lite demo run | Done (via `make cloud-lite`) |
+| 41 | Optional **5M local stress** demo (no Snowflake reload) | Deferred |
+| 42 | README polish + resume bullets | **Done** |
+
+

@@ -6,7 +6,7 @@ This project uses two demo tiers to balance **scale proof** with **cost control*
 
 | Demo | Events | Pipeline scope | S3 upload | Snowflake / dbt |
 |------|--------|----------------|-----------|-----------------|
-| **1M cloud-lite** | 1,000,000 | Full local + cloud | **Yes** (gold only, verified) | Planned (Week 5) |
+| **1M cloud-lite** | 1,000,000 | Full local + cloud | **Yes** (gold only, verified) | **Yes** (load + dbt + Streamlit verified) |
 | **5M local stress** | 5,000,000 | Full local only | **No** | **No** |
 | **285M full replay** | 285,000,000 | Documented only | **No** | **No** |
 

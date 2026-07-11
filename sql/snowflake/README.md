@@ -1,28 +1,41 @@
 # Snowflake load SQL (Week 4–5)
 
-SQL for S3 stage setup and (Week 5) gold table loads. **No raw, bronze, or silver in Snowflake.**
+SQL for S3 stage setup and curated gold table loads. **No raw, bronze, or silver in Snowflake.**
 
-## Day 26 — Stage setup (no load)
+## Stage setup (Day 26)
 
 | Script | Purpose |
 |--------|---------|
 | `01_create_file_format.sql` | Parquet file format |
 | `02_create_storage_integration.sql` | S3 integration (`gold/` only) |
-| `03_create_external_stage.sql` | External stage over `s3://{bucket}/gold/` |
+| `03_create_external_stage.sql` | External stage `RAW.S3_GOLD_STAGE` over `s3://{bucket}/gold/` |
 | `04_verify_stage_setup.sql` | `SHOW` / `DESC` verification |
-| `run_stage_setup.sql` | Run all of the above in order |
+| `06_list_gold_stage.sql` | `LIST @COMMERCESTREAM_GOLD_STAGE` |
+| `run_stage_setup.sql` | Run stage setup in order |
 
 ```bash
-# One-time AWS IAM role — see infra/snowflake/README.md
-# Then set SNOWFLAKE_S3_STORAGE_AWS_ROLE_ARN in .env
 make snowflake-stage-setup
 make snowflake-check-stage
+make snowflake-stage-list   # expect ~225 gold files
 make snowflake-suspend
 ```
 
-## Week 5 — Load (not yet)
+## Gold load (Day 29)
 
-`05_load_gold_tables.sql` (planned Day 29) will `COPY INTO` staging tables from `@COMMERCESTREAM_GOLD_STAGE`. Every load session ends with `make snowflake-suspend`.
+| Script | Purpose |
+|--------|---------|
+| `05_load_gold_tables.sql` | `CREATE TABLE` + `COPY INTO` for 5 gold marts |
+| `07_verify_gold_load.sql` | Row counts |
+| `run_load_gold.sql` | Load + verify |
+
+Hive partition columns (`session_date`, `purchase_date`) are parsed from `METADATA$FILENAME`.
+
+```bash
+make snowflake-load-gold    # COPY INTO + verify + suspend
+make snowflake-verify-load  # re-check counts + suspend
+make dbt-build              # .venv-dbt only + suspend
+make cloud-lite             # upload → load → dbt → suspend
+```
 
 ## Objects
 
@@ -30,4 +43,5 @@ make snowflake-suspend
 |--------|------|
 | File format | `COMMERCESTREAM_DB.STAGING.COMMERCESTREAM_PARQUET_FF` |
 | Storage integration | `COMMERCESTREAM_S3_INT` |
-| External stage | `COMMERCESTREAM_DB.STAGING.COMMERCESTREAM_GOLD_STAGE` |
+| External stage | `COMMERCESTREAM_DB.RAW.S3_GOLD_STAGE` |
+| Staging tables | `fct_sessions`, `fct_purchases`, `agg_product_performance`, `agg_conversion_funnel`, `fct_cart_abandonment` |

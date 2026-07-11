@@ -39,3 +39,7 @@ terraform.tfstate.backup
 
 # dbt
 .dbt/
+dbt/commercestream/target/
+dbt/commercestream/logs/
+dbt/commercestream/dbt_packages/
+.venv-dbt/

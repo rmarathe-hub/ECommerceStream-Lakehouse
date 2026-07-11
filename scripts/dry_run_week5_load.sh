@@ -74,11 +74,12 @@ done
 echo
 echo "Planned Week 5 command sequence (not executed):"
 echo "  1. make snowflake-check-guardrails"
-echo "  2. make upload-gold-s3              # if S3 gold stale"
-echo "  3. make snowflake-stage-setup     # Day 26 — once IAM role ready"
-echo "  4. make snowflake-load-gold       # Day 29 — COPY INTO (Week 5)"
-echo "  5. cd dbt/commercestream && dbt build --select <subset>  # Day 30+"
-echo "  6. make snowflake-suspend         # mandatory after every session"
+echo "  2. make snowflake-stage-list         # expect ~225 gold files"
+echo "  3. make upload-gold-s3              # if S3 gold stale"
+echo "  4. make snowflake-load-gold         # COPY INTO + verify + suspend"
+echo "  5. make dbt-build                   # .venv-dbt only + suspend"
+echo "  6. make cloud-lite                  # or all-in-one: upload → load → dbt → suspend"
+echo "  7. make snowflake-suspend           # mandatory after every session"
 echo
 
 echo "=== Summary: $PASS passed, $WARN warnings, $FAIL failed ==="

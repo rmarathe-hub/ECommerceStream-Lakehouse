@@ -288,6 +288,15 @@ check-snowflake-usage:
 	snowsql -f sql/admin/check_warehouse_usage.sql
 ```
 
+**Implemented Makefile targets (prefer these):**
+
+```bash
+make snowflake-load-gold   # COPY INTO + verify + suspend
+make dbt-build             # .venv-dbt/bin/dbt build + suspend
+make cloud-lite            # upload → load → dbt → suspend
+make snowflake-suspend
+```
+
 Even if you forget to suspend manually, the command sequence should do it for you.
 
 ---

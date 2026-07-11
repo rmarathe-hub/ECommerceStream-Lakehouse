@@ -1,0 +1,35 @@
+version: 2
+
+models:
+  - name: mart_sessions
+    description: Presentation mart for session analytics (dashboard-ready)
+    columns:
+      - name: session_id
+        tests:
+          - not_null
+          - unique
+      - name: converted
+        tests:
+          - not_null
+
+  - name: mart_product_performance
+    description: Presentation mart for product revenue and conversion rates
+    columns:
+      - name: product_id
+        tests:
+          - not_null
+          - unique
+      - name: total_revenue
+        tests:
+          - not_null
+
+  - name: mart_conversion_funnel
+    description: Presentation mart for daily funnel conversion rates
+    columns:
+      - name: session_date
+        tests:
+          - not_null
+          - unique
+      - name: total_sessions
+        tests:
+          - not_null
