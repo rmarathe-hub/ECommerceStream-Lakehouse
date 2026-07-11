@@ -400,7 +400,7 @@ Streamlit on Snowflake marts, optional CI, final demo polish. **5M local stress 
 |-----|------|--------|
 | 36 | Streamlit dashboard on `MARTS.mart_*` | **Done** |
 | 37 | README case study + resume bullets | **Done** |
-| 38 | Optional: manual GitHub Actions with suspend | Planned |
+| 38 | Manual GitHub Actions with `if: always()` suspend | **Done** |
 | 40 | Final 1M cloud-lite demo run | Done (via `make cloud-lite`) |
 | 41 | Optional **5M local stress** demo (no Snowflake reload) | Deferred |
 | 42 | README polish + resume bullets | **Done** |

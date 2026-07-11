@@ -53,5 +53,6 @@ Details: [week5_load_plan.md](week5_load_plan.md), [cost_controls.md](cost_contr
 - Only curated gold tables go to S3 and Snowflake.
 - Full 285M-event replay is documented but not run by default.
 - Every Snowflake session ends with `make snowflake-suspend`.
+- CI: push/PR local checks; cloud jobs are **manual** with `if: always()` suspend ([ci.md](ci.md)).
 
 Full guardrails: [cost_controls.md](cost_controls.md)

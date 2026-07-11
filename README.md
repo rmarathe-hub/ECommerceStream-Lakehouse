@@ -163,6 +163,16 @@ make snowflake-suspend   # when finished viewing
 
 See [dashboards/streamlit/README.md](dashboards/streamlit/README.md).
 
+### CI
+
+| Workflow | Trigger | Notes |
+|----------|---------|--------|
+| `local-quality` | push / PR | compile + `dbt parse` — no cloud |
+| `cloud-lite` | **manual only** | guardrails → optional load/dbt → **always suspend** |
+
+Secrets: `SNOWFLAKE_ACCOUNT`, `SNOWFLAKE_USER`, `SNOWFLAKE_PASSWORD`, `SNOWFLAKE_ROLE`.  
+Details: [docs/ci.md](docs/ci.md).
+
 ## Build plan
 
 Full day-by-day plan: [docs/build_plan.md](docs/build_plan.md)

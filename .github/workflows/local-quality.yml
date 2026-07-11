@@ -1,0 +1,74 @@
+name: local-quality
+
+# Cheap local checks only — no Snowflake, no S3, no Docker stack required.
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: local-quality-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install lightweight deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install "dbt-core==1.10.9" "dbt-snowflake==1.10.0"
+
+      - name: Compile Python sources
+        run: python -m compileall -q src scripts dashboards/streamlit
+
+      - name: Check required project files
+        run: |
+          set -euo pipefail
+          for f in \
+            Makefile \
+            docker-compose.yml \
+            sql/admin/04_suspend_warehouse.sql \
+            sql/admin/05_check_snowflake_guardrails.sql \
+            sql/snowflake/05_load_gold_tables.sql \
+            sql/snowflake/run_load_gold.sql \
+            dbt/commercestream/dbt_project.yml \
+            dashboards/streamlit/app.py \
+            scripts/run_snowflake_sql.py \
+            docs/cost_controls.md \
+            docs/architecture.md
+          do
+            test -f "$f" || { echo "missing: $f"; exit 1; }
+          done
+          echo "required files: OK"
+
+      - name: dbt parse (no warehouse connection)
+        run: |
+          mkdir -p ~/.dbt
+          cat > ~/.dbt/profiles.yml <<'EOF'
+          commercestream:
+            target: ci
+            outputs:
+              ci:
+                type: snowflake
+                account: unused
+                user: unused
+                password: unused
+                role: ACCOUNTADMIN
+                database: COMMERCESTREAM_DB
+                warehouse: DE_PROJECT_WH
+                schema: MARTS
+                threads: 1
+                client_session_keep_alive: false
+          EOF
+          dbt parse --project-dir dbt/commercestream --profiles-dir ~/.dbt

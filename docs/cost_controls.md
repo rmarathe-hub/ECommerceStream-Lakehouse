@@ -149,8 +149,10 @@ No scheduled hourly or daily Snowflake jobs. If a weekly schedule is added later
 ```yaml
 - name: Suspend Snowflake warehouse
   if: always()
-  run: snowsql -f sql/admin/suspend_warehouse.sql
+  run: python scripts/run_snowflake_sql.py --ignore-errors sql/admin/04_suspend_warehouse.sql
 ```
+
+See [ci.md](ci.md) for `local-quality` (push/PR) and manual `cloud-lite` workflows.
 
 Every Makefile cloud target (`load-snowflake`, `dbt-build`, `cloud-lite`) must chain to `suspend-snowflake`.
 
